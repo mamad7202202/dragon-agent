@@ -10,7 +10,7 @@
 
 *Bring your own key. Own your data. Run anywhere.*
 
-[![Build](https://github.com/mamad720220/dragon-agent/actions/workflows/build.yml/badge.svg)](https://github.com/mamad720220/dragon-agent/actions/workflows/build.yml)
+[![Build](https://github.com/mamad7202202/dragon-agent/actions/workflows/build.yml/badge.svg)](https://github.com/mamad7202202/dragon-agent/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-ff6347.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-stable-ff984a.svg)](https://www.rust-lang.org)
 [![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-66d496.svg)]()
@@ -39,7 +39,7 @@ Most terminal agents forget everything the moment a session ends. Dragon Agent i
 Grab a prebuilt binary from [Actions artifacts](../../actions) or build yourself:
 
 ```bash
-cargo install --git https://github.com/mamad720220/dragon-agent
+cargo install --git https://github.com/mamad7202202/dragon-agent
 ```
 
 ## Quick start

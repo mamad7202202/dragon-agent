@@ -13,7 +13,7 @@ use clap::{Parser, Subcommand};
     name = "dragon",
     version = concat!("v", env!("CARGO_PKG_VERSION")),
     about = "Dragon Agent - a fast terminal AI agent with a long memory",
-    after_help = "docs & source: https://github.com/mamad720220/dragon-agent"
+    after_help = "docs & source: https://github.com/mamad7202202/dragon-agent"
 )]
 pub struct Cli {
     /// Override the model for this run (format: provider/model-id)

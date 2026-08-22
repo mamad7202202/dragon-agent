@@ -88,7 +88,10 @@ pub fn defs() -> Vec<crate::provider::ToolDef> {
             parameters: schema(
                 json_obj(&[
                     ("content", json_obj(&[("type", Value::String("string".into())), ("description", Value::String("The fact, stated concisely".into()))])),
-                    ("tags", json_obj(&[("type", Value::String("array".into())), ("items", json_obj(&[("type", Value::String("string".into()))])))])),
+                    ("tags", json_obj(&[
+                        ("type", Value::String("array".into())),
+                        ("items", json_obj(&[("type", Value::String("string".into()))])),
+                    ])),
                     ("importance", json_obj(&[("type", Value::String("number".into())), ("description", Value::String("0.0-1.0".into()))])),
                 ]),
                 &["content"],

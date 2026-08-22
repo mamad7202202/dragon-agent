@@ -20,13 +20,16 @@ jobs:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact: dragon-x86_64-windows.exe
+            cli: dragon-x86_64-windows.exe
+            gui: dragon-gui-x86_64-windows.exe
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact: dragon-x86_64-linux
+            cli: dragon-x86_64-linux
+            gui: dragon-gui-x86_64-linux
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact: dragon-aarch64-macos
+            cli: dragon-aarch64-macos
+            gui: dragon-gui-aarch64-macos
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -39,18 +42,20 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Test
-        run: cargo test --target ${{ matrix.target }} --workspace
+        run: cargo test --workspace --target ${{ matrix.target }}
 
-      - name: Build release
-        run: cargo build --release --target ${{ matrix.target }}
+      - name: Build release (cli + gui)
+        run: cargo build --release --workspace --target ${{ matrix.target }}
 
-      - name: Stage raw executable
+      - name: Stage executables
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item "target/${{ matrix.target }}/release/dragon${{ runner.os == 'Windows' && '.exe' || '' }}" "dist/${{ matrix.artifact }}"
+          $ext = if ("${{ runner.os }}" -eq "Windows") { ".exe" } else { "" }
+          Copy-Item "target/${{ matrix.target }}/release/dragon$ext" "dist/${{ matrix.cli }}"
+          Copy-Item "target/${{ matrix.target }}/release/dragon-gui$ext" "dist/${{ matrix.gui }}"
 
-      - name: Upload build artifact
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.target }}
@@ -58,7 +63,6 @@ jobs:
           if-no-files-found: error
 
   # Rolling "latest" release refreshed on every push to main.
-  # Install scripts fetch binaries straight from this release.
   nightly:
     name: Publish latest (rolling)
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -67,15 +71,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download all executables
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: dist
 
       - name: Make unix binaries executable
         run: |
-          chmod +x dist/dragon-x86_64-linux dist/dragon-aarch64-macos
+          chmod +x dist/dragon-x86_64-linux dist/dragon-aarch64-macos \
+                   dist/dragon-gui-x86_64-linux dist/dragon-gui-aarch64-macos
 
       - name: Publish to "latest" release
         uses: softprops/action-gh-release@v2
@@ -87,15 +91,18 @@ jobs:
           overwrite_files: true
           allow_updates: true
           body: |
-            Rolling build of `main`. Raw executables, no archives.
+            Rolling build of `main`. Raw executables - CLI and desktop app share one core.
 
-            | file | platform |
-            |---|---|
-            | `dragon-x86_64-windows.exe` | Windows 10/11 x64 |
-            | `dragon-x86_64-linux` | Linux x64 (glibc) |
-            | `dragon-aarch64-macos` | macOS Apple Silicon |
+            | file | what | platform |
+            |---|---|---|
+            | `dragon-x86_64-windows.exe` | terminal agent | Windows x64 |
+            | `dragon-gui-x86_64-windows.exe` | desktop app | Windows x64 |
+            | `dragon-x86_64-linux` | terminal agent | Linux x64 |
+            | `dragon-gui-x86_64-linux` | desktop app | Linux x64 |
+            | `dragon-aarch64-macos` | terminal agent | macOS Apple Silicon |
+            | `dragon-gui-aarch64-macos` | desktop app | macOS Apple Silicon |
 
-            Install with one line:
+            Install the CLI with one line:
             ```sh
             curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh
             ```
@@ -112,15 +119,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download all executables
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: dist
 
       - name: Make unix binaries executable
         run: |
-          chmod +x dist/dragon-x86_64-linux dist/dragon-aarch64-macos
+          chmod +x dist/dragon-x86_64-linux dist/dragon-aarch64-macos \
+                   dist/dragon-gui-x86_64-linux dist/dragon-gui-aarch64-macos
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

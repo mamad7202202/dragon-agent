@@ -1,10 +1,10 @@
 //! Command-line interface: subcommands, BYOK setup, one-shot mode.
 
-use crate::agent::{Agent, AgentEvent};
-use crate::config::{Config, ProviderCfg};
-use crate::memory::MemoryStore;
-use crate::provider;
-use crate::session;
+use dragon_core::agent::{Agent, AgentEvent};
+use dragon_core::config::{Config, ProviderCfg};
+use dragon_core::memory::MemoryStore;
+use dragon_core::provider;
+use dragon_core::session;
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 
@@ -146,7 +146,7 @@ fn setup_preset(
             "",
         )
     } else {
-        let p = crate::presets::find(preset)
+        let p = dragon_core::presets::find(preset)
             .with_context(|| format!("unknown preset '{preset}'"))?;
         (
             name.clone().unwrap_or_else(|| p.name.to_string()),

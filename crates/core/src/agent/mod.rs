@@ -15,6 +15,7 @@ pub enum AgentEvent {
     ToolStart { name: String, detail: String },
     ToolEnd { name: String },
     Compacted,
+    Stopped,
     Error(String),
 }
 pub struct Agent {
@@ -25,6 +26,7 @@ pub struct Agent {
     pub ctx: tools::ToolCtx,
     compaction_after: usize,
     pub tools_enabled: bool,
+    cancel: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Agent {
@@ -43,7 +45,14 @@ impl Agent {
             ctx: tools::ToolCtx { memory, allow_commands },
             compaction_after,
             tools_enabled: true,
+            cancel: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
+    }
+
+    /// Request cancellation of the in-flight turn.
+    pub fn stop(&self) {
+        self.cancel
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn set_model(&mut self, provider: Arc<dyn LlmProvider>, model: &str) {
@@ -74,6 +83,8 @@ impl Agent {
         user_text: &str,
         tx: UnboundedSender<AgentEvent>,
     ) -> Result<String> {
+        self.cancel
+            .store(false, std::sync::atomic::Ordering::Relaxed);
         self.history.push(Message::user(user_text));
 
         for _round in 0..10 {
@@ -91,6 +102,11 @@ impl Agent {
             let mut text = String::new();
             let mut calls: Option<Vec<crate::provider::ToolCall>> = None;
             while let Some(ev) = erx.recv().await {
+                if self.cancel.load(std::sync::atomic::Ordering::Relaxed) {
+                    handle.abort();
+                    let _ = tx.send(AgentEvent::Stopped);
+                    return Ok(String::new());
+                }
                 match ev {
                     StreamEvent::Delta(d) => {
                         text.push_str(&d);

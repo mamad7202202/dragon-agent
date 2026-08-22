@@ -1,6 +1,3 @@
-// context compaction lives in its own module
-pub mod compact;
-
 //! Hybrid memory system.
 //!
 //! Three cooperating layers:
@@ -12,6 +9,8 @@ pub mod compact;
 //!                        always injected into the system prompt.
 //! 3. Episodic memory   — full session transcripts (see `crate::session`)
 //!                        that can be resumed verbatim.
+
+pub mod compact;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

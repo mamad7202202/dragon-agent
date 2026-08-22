@@ -189,32 +189,40 @@ impl App {
     }
 
     async fn switch_model(&mut self, spec: &str) {
-        match self.config.resolve_model(Some(spec)) {
-            Ok((pcfg, model_id)) => match provider::build(pcfg) {
-                Ok(p) => {
-                    let allow = self.config.settings.allow_commands;
-                    let compact_after = self.config.settings.compaction_messages;
-                    match &self.agent {
-                        Some(ag) => {
-                            ag.lock().await.set_model(p, &model_id);
-                        }
-                        None => {
-                            self.agent = Some(Arc::new(tokio::sync::Mutex::new(Agent::new(
-                                p,
-                                model_id,
-                                self.memory.clone(),
-                                allow,
-                                compact_after,
-                            ))));
-                        }
-                    }
-                    self.model_spec = format!("{}/{}", pcfg.name, model_id);
-                    self.say(Entry::System(format!("model set to {}", self.model_spec)));
-                }
-                Err(e) => self.say(Entry::System(format!("error: {e:#}"))),
-            },
-            Err(e) => self.say(Entry::System(format!("error: {e:#}"))),
+        let resolved = self.config.resolve_model(Some(spec));
+        let (pcfg, model_id) = match resolved {
+            Ok(pair) => pair,
+            Err(e) => {
+                self.say(Entry::System(format!("error: {e:#}")));
+                return;
+            }
+        };
+        let p = match provider::build(pcfg) {
+            Ok(p) => p,
+            Err(e) => {
+                self.say(Entry::System(format!("error: {e:#}")));
+                return;
+            }
+        };
+        let spec_str = format!("{}/{}", pcfg.name, model_id);
+        let allow = self.config.settings.allow_commands;
+        let compact_after = self.config.settings.compaction_messages;
+        match &self.agent {
+            Some(ag) => {
+                ag.lock().await.set_model(p, &model_id);
+            }
+            None => {
+                self.agent = Some(Arc::new(tokio::sync::Mutex::new(Agent::new(
+                    p,
+                    model_id,
+                    self.memory.clone(),
+                    allow,
+                    compact_after,
+                ))));
+            }
         }
+        self.model_spec = spec_str;
+        self.say(Entry::System(format!("model set to {}", self.model_spec)));
     }
 
     async fn new_session(&mut self) -> Result<()> {

@@ -263,6 +263,7 @@ async fn run_oneshot(prompt: &str, model_override: Option<String>, tools: bool) 
                     eprintln!("\x1b[2m» {name} {detail}\x1b[0m");
                 }
                 AgentEvent::Compacted => eprintln!("\x1b[2m· context compacted\x1b[0m"),
+                AgentEvent::Stopped => eprintln!("\x1b[2m· stopped\x1b[0m"),
                 AgentEvent::Error(e) => eprintln!("\x1b[31merror: {e}\x1b[0m"),
                 AgentEvent::ToolEnd { .. } => {}
             }

@@ -210,7 +210,7 @@ fn welcome_lines(area: Rect) -> Vec<Line<'static>> {
     v.push(
         Line::from(Span::styled(
             "a fast AI agent with a long memory".to_string(),
-            Style::new().fg(ASH).italic(),
+            Style::new().fg(ASH).add_modifier(Modifier::ITALIC),
         ))
         .alignment(Alignment::Center),
     );
@@ -240,14 +240,10 @@ fn draw_wizard(f: &mut Frame, app: &App, rows: &[String], area: Rect) {
                 Some("provider") => " setup - provider ",
                 Some("url") => " setup - base url ",
                 Some("key") => " setup - api key ",
-                Some("more") => " setup - models ",
+                Some("more") => " setup - models (up/down + space) ",
                 _ => " setup ",
             },
             fg(GOLD),
-        ))
-        .bottom_title(Span::styled(
-            " ↑↓ move · space/enter select · type to filter-free custom input ",
-            fg(SCALE),
         ));
     let inner = block.inner(area);
     f.render_widget(block, area);

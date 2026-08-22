@@ -15,6 +15,7 @@ path = "src/main.rs"
 [dependencies]
 dragon-core = { path = "../core" }
 eframe = "0.29"
+egui = "0.29"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
 anyhow = "1"
 chrono = "0.4"

@@ -470,11 +470,10 @@ impl App {
                         line.trim().to_ascii_lowercase()
                     };
 
-                    let preset = match choice.parse::<usize>() {
-                        Ok(n) if (1..=dragon_core::presets::PRESETS.len()).contains(&n) => {
-                            Some(dragon_core::presets::PRESETS[n - 1])
-                        }
-                        _ => dragon_core::presets::find(&choice),
+                    let preset = if let Ok(n) = choice.parse::<usize>() {
+                        dragon_core::presets::PRESETS.get(n.wrapping_sub(1))
+                    } else {
+                        dragon_core::presets::find(&choice)
                     };
 
                     if choice.split_whitespace().next() == Some("custom") {
@@ -719,7 +718,7 @@ impl App {
                 self.busy = false;
                 self.streaming = None;
                 self.status = "stopped".into();
-                self.say(Entry::System("stopped."));
+                self.say(Entry::System("stopped.".to_string()));
             }
             AgentEvent::Error(e) => {
                 self.entries.push(Entry::System(format!("error: {e}")));

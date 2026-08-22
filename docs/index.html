@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dragon Agent — a fast AI agent with a long memory</title>
+<meta name="description" content="Dragon Agent: an open-source, Rust-powered AI agent for your terminal with a hybrid memory system. Try the interactive demo.">
+<style>
+  :root{
+    --night:#100f12; --smoke:#1b191e; --scale:#3a3640;
+    --ash:#8a8790; --bone:#e5e2db;
+    --ember:#ff6347; --flame:#ff984a; --gold:#ffcd70;
+    --jade:#66d496; --sky:#6caaf5; --violet:#ac8cfa;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 500px at 70% -10%, rgba(255,99,71,.07), transparent),
+      var(--night);
+    color:var(--bone);
+    font-family:"SF Mono",ui-monospace,"Cascadia Code",Consolas,Menlo,monospace;
+    display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px;
+  }
+  header{width:100%;max-width:920px;display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+  .brand{font-weight:700;letter-spacing:.14em}
+  .brand b{color:var(--ember)} .brand span{color:var(--gold)}
+  nav a{
+    color:var(--ash);text-decoration:none;margin-left:18px;font-size:13px;
+    border-bottom:1px solid transparent;padding-bottom:2px
+  }
+  nav a:hover{color:var(--flame);border-color:var(--flame)}
+  .terminal{
+    width:100%;max-width:920px;height:min(72vh,640px);
+    background:var(--smoke);
+    border:1px solid var(--scale);border-radius:10px;
+    box-shadow:0 30px 80px rgba(0,0,0,.55), inset 0 0 60px rgba(255,99,71,.03);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .titlebar{
+    display:flex;align-items:center;gap:7px;
+    padding:10px 14px;background:#141216;border-bottom:1px solid var(--scale)
+  }
+  .dot{width:11px;height:11px;border-radius:50%}
+  .d1{background:#ff5f57}.d2{background:#febc2e}.d3{background:#28c840}
+  .titlebar span{color:var(--ash);font-size:12px;margin-left:8px}
+  #screen{
+    flex:1;overflow-y:auto;padding:18px 20px;font-size:13.5px;line-height:1.55;
+    scroll-behavior:smooth;
+  }
+  #screen::-webkit-scrollbar{width:8px}
+  #screen::-webkit-scrollbar-thumb{background:var(--scale);border-radius:4px}
+  .line{white-space:pre-wrap;word-break:break-word}
+  .c-ember{color:var(--ember)}.c-flame{color:var(--flame)}.c-gold{color:var(--gold)}
+  .c-ash{color:var(--ash)}.c-jade{color:var(--jade)}.c-sky{color:var(--sky)}
+  .c-violet{color:var(--violet)}.c-dim{color:#57545c}.c-bone{color:var(--bone)}
+  .cursor{display:inline-block;width:8px;height:15px;background:var(--gold);
+    vertical-align:-2px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .inputrow{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--scale);background:#17151a}
+  .inputrow label{color:var(--ember);font-weight:700}
+  #cmd{
+    flex:1;background:none;border:none;outline:none;color:var(--bone);
+    font:inherit;font-size:13.5px;caret-color:var(--gold)
+  }
+  footer{
+    width:100%;max-width:920px;margin-top:18px;color:var(--ash);font-size:12.5px;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px
+  }
+  footer a{color:var(--flame);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  .pillrow{display:flex;gap:8px;flex-wrap:wrap;width:100%;max-width:920px;margin-top:14px}
+  .pill{
+    border:1px solid var(--scale);border-radius:999px;padding:5px 12px;font-size:12px;
+    color:var(--ash);cursor:pointer;user-select:none
+  }
+  .pill:hover{border-color:var(--flame);color:var(--flame)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><b>DRAGON</b> <span>AGENT</span></div>
+  <nav>
+    <a href="https://github.com/mamad7202202/dragon-agent">source</a>
+    <a href="https://github.com/mamad7202202/dragon-agent/releases">releases</a>
+    <a href="https://github.com/mamad7202202/dragon-agent#the-memory-system">memory docs</a>
+  </nav>
+</header>
+
+<div class="terminal">
+  <div class="titlebar">
+    <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+    <span>dragon — demo (runs entirely in your browser)</span>
+  </div>
+  <div id="screen"></div>
+  <div class="inputrow">
+    <label for="cmd">you&nbsp;›</label>
+    <input id="cmd" autocomplete="off" spellcheck="false" placeholder="type 'help' and press enter">
+  </div>
+</div>
+
+<div class="pillrow" id="pills"></div>
+
+<footer>
+  <span>by <a href="https://t.me/mamad720220">@mamad720220</a> · MIT license</span>
+  <span>this page is a simulation — install the real thing below</span>
+</footer>
+
+<script>
+const screen = document.getElementById('screen');
+const input  = document.getElementById('cmd');
+
+function el(html){ const d=document.createElement('div'); d.className='line'; d.innerHTML=html; return d; }
+function out(html){ screen.appendChild(el(html)); scrollEnd(); }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function scrollEnd(){ screen.scrollTop = screen.scrollHeight; }
+
+/* ---- boot sequence ------------------------------------------------ */
+const BANNER = [
+'╔═╗ ╦═╗ ┌─┐ ┌─┐ ┌─┐ ╔╦╗   ┌─┐ ┌─┐ ┌─┐ ╔╦╗ ┌┬┐',
+'║ ║ ╠═╝ ├─┤ │ ┬ │ │ ║║║   ├─┤ │ ┬ ├─┤ ║║║  │ ',
+'╚═╝ ╩   ┴ ┴ ┴─┘ └─┘ ╩ ╩   └─┘ └─┘ ┴ ┴ ╩ ╩  ┴ ',
+];
+
+async function boot(){
+  await typeOut('<span class="c-dim">$ curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh</span>', 12);
+  await sleep(250);
+  out('<span class="c-jade">installed -&gt; ~/.local/bin/dragon</span>');
+  await sleep(350);
+  out('<span class="c-dim">$ dragon</span>');
+  await sleep(300);
+  BANNER.forEach((l,i)=>{
+    const colors=['c-ember','c-flame','c-gold'];
+    const pre=document.createElement('div');
+    pre.className='line';
+    pre.innerHTML='<span class="'+colors[i]+'">'+esc(l)+'</span>';
+    screen.appendChild(pre);
+  });
+  scrollEnd();
+  await sleep(300);
+  out('');
+  out('<span class="c-ash">a fast AI agent with a long memory · by <span class="c-sky">@mamad720220</span></span>');
+  out('<span class="c-ash">hybrid memory · bring your own key · single native binary</span>');
+  out('');
+  out('type <span class="c-gold">help</span> to see what this demo can do.');
+  out('');
+}
+
+async function typeOut(html, speed){
+  // types plain text then swaps in final html (keeps tags simple)
+  const tmp = document.createElement('div'); tmp.innerHTML = html;
+  const text = tmp.textContent;
+  const line = document.createElement('div');
+  line.className='line'; screen.appendChild(line);
+  for(let i=0;i<text.length;i++){
+    line.textContent = text.slice(0,i+1);
+    scrollEnd();
+    await sleep(speed);
+  }
+  line.innerHTML = html;
+}
+
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+/* ---- fake brain --------------------------------------------------- */
+let busy=false;
+
+const HELP = [
+ ['help',            'this list'],
+ ['models',          'list providers you could plug in'],
+ ['setup google',    'walk through adding Google AI Studio'],
+ ['remember likes tea','save a fact to long-term memory'],
+ ['memories',        'show stored facts'],
+ ['run summarize this repo','watch a fake streaming answer'],
+ ['tools',           'what the agent can do on your machine'],
+ ['install',         'one-line install commands'],
+ ['clear',           'wipe the screen'],
+];
+
+function reply(cmd){
+  const c = cmd.trim().toLowerCase();
+
+  if(c==='clear'){ screen.innerHTML=''; return true; }
+
+  if(c==='help'||c==='?'){
+    out('<span class="c-gold">demo commands</span>');
+    HELP.forEach(([k,v])=>out('  <span class="c-ember">'+k.padEnd(24)+'</span><span class="c-ash">'+v+'</span>'));
+    out('');
+    out('<span class="c-ash">anything else you type is answered with a canned demo response.</span>');
+    return false;
+  }
+
+  if(c.startsWith('models')){
+    out('<span class="c-gold">built-in presets</span>');
+    [
+      ['google    ','Google AI Studio (Gemini)','free key at aistudio.google.com/apikey'],
+      ['openrouter','400+ models, one key','openrouter.ai/keys'],
+      ['openai    ','GPT models','platform.openai.com'],
+      ['anthropic ','Claude, native protocol','console.anthropic.com'],
+      ['groq      ','ultra-fast inference','console.groq.com'],
+      ['deepseek  ','deepseek-chat / reasoner','platform.deepseek.com'],
+      ['ollama    ','local, no cloud','ollama serve'],
+      ['lmstudio  ','local server','localhost:1234'],
+    ].forEach(([n,l,h])=>out('  <span class="c-ember">'+n+'</span>'+esc(l)+'  <span class="c-dim">'+h+'</span>'));
+    return false;
+  }
+
+  if(c.startsWith('setup')){
+    out('<span class="c-violet">» wizard</span> <span class="c-dim">preset detected: google</span>');
+    out('<span class="c-ash">note: free key at https://aistudio.google.com/apikey</span>');
+    out('<span class="c-ash">in the real app you would paste your key here — it is stored only on your machine.</span>');
+    stream('saved to ~/.config/dragon/config.toml\nconnected via google/gemini-2.5-flash — happy hacking!');
+    return true;
+  }
+
+  if(c.startsWith('remember')){
+    const fact = cmd.trim().slice(8).trim() || 'likes tea';
+    out('<span class="c-jade">saved [a3f9c1] '+esc(fact)+'</span>');
+    out('<span class="c-dim">this fact will be recalled automatically in future sessions.</span>');
+    return false;
+  }
+
+  if(c==='memories'){
+    out('<span class="c-gold">long-term memory</span>');
+    out('  [a3f9c1] prefers dark mode everywhere');
+    out('  [77bd02] project dragon uses rust + tokio');
+    out('<span class="c-dim">recall blends relevance × importance × recency, locally.</span>');
+    return false;
+  }
+
+  if(c==='tools'){
+    out('the real agent ships with these tools:');
+    [['read_file ','read any text file'],['write_file','create or overwrite files'],
+     ['list_files','recursive directory listing'],['grep      ','regex search across a tree'],
+     ['run_shell ','execute commands (opt-in gate)'],['save_memory','persist durable facts']]
+     .forEach(([t,d])=>out('  <span class="c-violet">'+t+'</span><span class="c-ash">'+d+'</span>'));
+    return false;
+  }
+
+  if(c==='install'||c.startsWith('install')){
+    out('<span class="c-gold">linux / macOS</span>');
+    out('curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh');
+    out('<span class="c-gold">windows powershell</span>');
+    out('irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex');
+    return false;
+  }
+
+  if(c==='dragon'||c.includes('who are you')||c==='credits'){
+    stream('I am Dragon Agent — an open-source terminal AI agent written in Rust.\nMy author is mamad720220 (find him on Telegram as @mamad720220).\nWhat makes me different is the memory: facts, procedures, sessions and\ncompaction working together so I never meet you twice like strangers.');
+    return true;
+  }
+
+  if(c.length===0){ return false; }
+
+  stream("this browser demo answers with canned text — but the real binary\nstreams live tokens from YOUR model with YOUR key.\nTry 'help', 'models' or 'tools'.");
+  return false;
+}
+
+/* character-by-character streaming to mimic the TUI */
+function stream(text){
+  const line=document.createElement('div'); line.className='line';
+  line.innerHTML='<span class="c-ember">dragon › </span>';
+  screen.appendChild(line);
+  let i=0;
+  const body=document.createElement('span');
+  body.className='c-bone';
+  const cur=document.createElement('span'); cur.className='cursor';
+  line.appendChild(body); line.appendChild(cur);
+  scrollEnd();
+  const iv=setInterval(()=>{
+    body.textContent += text[i++] ?? '';
+    if(text[i-1]==='\n'){ line.appendChild(document.createElement('br')); }
+    scrollEnd();
+    if(i>=text.length){ clearInterval(iv); cur.remove(); out(''); }
+  }, 16);
+}
+
+/* history */
+let hist=[], hidx=-1;
+input.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){
+    const v=input.value; input.value='';
+    out('<span class="c-sky">you ›</span> '+esc(v));
+    if(v.trim()){ hist.push(v); hidx=hist.length; }
+    busy = reply(v);
+    if(busy){ input.placeholder='...'; setTimeout(()=>input.placeholder="",800); }
+  } else if(e.key==='ArrowUp'){ if(hidx>0){hidx--; input.value=hist[hidx];} e.preventDefault(); }
+  else if(e.key==='ArrowDown'){ if(hidx<hist.length-1){hidx++; input.value=hist[hidx];} else {hidx=hist.length; input.value='';} e.preventDefault(); }
+});
+
+/* quick pills */
+const PILLS=['help','models','setup google','remember likes tea','memories','tools','run demo','install'];
+PILLS.forEach(p=>{
+  const s=document.createElement('span'); s.className='pill'; s.textContent=p;
+  s.onclick=()=>{ input.value=p; input.focus(); };
+  document.getElementById('pills').appendChild(s);
+});
+
+boot();
+input.focus();
+</script>
+</body>
+</html>

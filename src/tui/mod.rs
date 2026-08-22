@@ -43,10 +43,21 @@ pub struct App {
     pub model_spec: String,
     pub session_id: String,
     pub should_quit: bool,
+    pub wizard: Option<Wizard>,
     agent: Option<Arc<tokio::sync::Mutex<Agent>>>,
     session: Arc<Mutex<SessionLog>>,
     memory: Arc<Mutex<MemoryStore>>,
     config: Config,
+}
+
+/// Interactive first-run setup: pick provider -> paste key -> pick model.
+pub struct Wizard {
+    step: &'static str, // "provider" | "url" | "key" | "model"
+    name: String,
+    base_url: String,
+    kind: String,
+    key: String,
+    models: Vec<String>,
 }
 
 impl App {
@@ -99,6 +110,11 @@ impl App {
         }
         self.scroll_offset = 0;
 
+        if self.wizard.is_some() {
+            self.wizard_feed(&text);
+            return Ok(());
+        }
+
         if let Some(cmdline) = text.strip_prefix('/') {
             self.command(cmdline).await;
             return Ok(());
@@ -138,6 +154,7 @@ impl App {
             "help" => self.say(Entry::System(HELP.into())),
             "quit" | "exit" => self.should_quit = true,
             "clear" => self.entries.clear(),
+            "setup" => self.start_wizard(),
             "new" => {
                 let _ = self.new_session().await;
             }
@@ -185,6 +202,175 @@ impl App {
             other => self.say(Entry::System(format!(
                 "unknown '/{other}' - try /help"
             ))),
+        }
+    }
+
+    // ---------------------------------------------------------------- setup
+
+    pub fn start_wizard(&mut self) {
+        self.wizard = Some(Wizard {
+            step: "provider",
+            name: String::new(),
+            base_url: String::new(),
+            kind: String::new(),
+            key: String::new(),
+            models: Vec::new(),
+        });
+        self.say(Entry::System(crate::presets::menu()));
+        self.status = "setup - pick a provider".into();
+    }
+
+    fn wizard_feed(&mut self, line: &str) {
+        let mut msgs: Vec<String> = Vec::new();
+        let mut done: Option<(String, crate::config::ProviderCfg)> = None;
+
+        if let Some(w) = self.wizard.as_mut() {
+            match w.step {
+                "provider" => {
+                    let choice = line.trim().to_ascii_lowercase();
+                    if choice == "custom" || choice == "c" {
+                        w.step = "url";
+                        msgs.push(
+                            "paste the base URL of the endpoint (OpenAI-compatible):".into(),
+                        );
+                    } else {
+                        let preset = match choice.parse::<usize>() {
+                            Ok(n) => crate::presets::PRESETS.get(n.wrapping_sub(1)),
+                            Err(_) => crate::presets::find(&choice),
+                        };
+                        match preset {
+                            Some(p) => {
+                                w.name = p.name.to_string();
+                                w.base_url = p.base_url.to_string();
+                                w.kind = p.kind.to_string();
+                                w.models = p.models.iter().map(|m| m.to_string()).collect();
+                                msgs.push(format!("note: {}", p.note));
+                                if p.key_required {
+                                    w.step = "key";
+                                    msgs.push("now paste your API key:".into());
+                                } else {
+                                    w.step = "model";
+                                    let first =
+                                        w.models.first().cloned().unwrap_or_default();
+                                    msgs.push(format!(
+                                        "model id? (press enter for '{first}')"
+                                    ));
+                                }
+                            }
+                            None => msgs.push(
+                                "not on the list - type a number, a preset name, or 'custom'."
+                                    .into(),
+                            ),
+                        }
+                    }
+                }
+                "url" => {
+                    let url = line.trim().trim_end_matches('/').to_string();
+                    if !url.starts_with("http") {
+                        msgs.push("that does not look like a URL - try again:".into());
+                    } else {
+                        w.base_url = url;
+                        w.kind = if w.base_url.contains("anthropic") {
+                            "anthropic".into()
+                        } else {
+                            "openai".into()
+                        };
+                        w.step = "key";
+                        msgs.push("API key for it (type 'none' for local servers):".into());
+                    }
+                }
+                "key" => {
+                    let k = line.trim().to_string();
+                    if k.is_empty() {
+                        msgs.push("empty key - paste the key, or 'none':".into());
+                    } else {
+                        w.key = if k.eq_ignore_ascii_case("none") { String::new() } else { k };
+                        w.step = "model";
+                        let first = w.models.first().cloned().unwrap_or_default();
+                        msgs.push(format!(
+                            "model id? (press enter for '{first}', or type another)"
+                        ));
+                    }
+                }
+                "model" => {
+                    let model = line.trim().to_string();
+                    let model = if model.is_empty() {
+                        w.models.first().cloned().unwrap_or_default()
+                    } else {
+                        model
+                    };
+                    if model.is_empty() {
+                        msgs.push("type a model id (e.g. gpt-4o-mini):".into());
+                    } else {
+                        let cfg = crate::config::ProviderCfg {
+                            name: w.name.clone(),
+                            base_url: w.base_url.clone(),
+                            api_key: w.key.clone(),
+                            kind: Some(w.kind.clone()),
+                            models: vec![model.clone()],
+                        };
+                        done = Some((model, cfg));
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        for m in msgs {
+            self.say(Entry::System(m));
+        }
+
+        if let Some((model_id, pcfg)) = done {
+            self.finish_wizard(model_id, pcfg);
+        }
+    }
+
+    fn finish_wizard(&mut self, model_id: String, mut pcfg: crate::config::ProviderCfg) {
+        let mut newcfg = self.config.clone();
+
+        let mut pname = pcfg.name.clone();
+        if pname == "custom" {
+            pname = format!("custom-{}", &uuid::Uuid::new_v4().simple().to_string()[..4]);
+        }
+        if newcfg.find_provider(&pname).is_some() {
+            pname = format!("{pname}-{}", &uuid::Uuid::new_v4().simple().to_string()[..4]);
+        }
+        pcfg.name = pname.clone();
+
+        let spec = format!("{pname}/{model_id}");
+        newcfg.default_model = Some(spec.clone());
+        newcfg.providers.push(pcfg.clone());
+
+        if let Err(e) = newcfg.save() {
+            self.say(Entry::System(format!("error saving config: {e:#}")));
+            return;
+        }
+
+        match provider::build(&pcfg) {
+            Ok(p) => {
+                let agent = Agent::new(
+                    p,
+                    model_id,
+                    self.memory.clone(),
+                    newcfg.settings.allow_commands,
+                    newcfg.settings.compaction_messages,
+                );
+                self.agent = Some(Arc::new(tokio::sync::Mutex::new(agent)));
+                self.config = newcfg;
+                self.model_spec = spec;
+                self.wizard = None;
+                self.status = "ready".into();
+                self.say(Entry::System(format!(
+                    "saved to {}.\nconnected via {} - happy hacking!",
+                    Config::path().display(),
+                    self.model_spec
+                )));
+            }
+            Err(e) => {
+                self.wizard = None;
+                self.status = "setup failed".into();
+                self.say(Entry::System(format!("error: {e:#}\nrun /setup to try again.")));
+            }
         }
     }
 
@@ -321,6 +507,7 @@ fn spawn_turn(
 }
 
 const HELP: &str = "commands:
+  /setup                    (re)configure a provider interactively
   /model <provider/model>   switch model mid-session
   /model                    show current model
   /remember <fact>          pin a fact to long-term memory
@@ -347,6 +534,7 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
         model_spec: "(none)".into(),
         session_id: String::new(),
         should_quit: false,
+        wizard: None,
         agent: None,
         session: Arc::new(Mutex::new(SessionLog::create("(none)")?)),
         memory: memory.clone(),
@@ -370,6 +558,7 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
         }
         Err(_) => {
             app.status = "no model configured".into();
+            app.start_wizard();
         }
     }
 

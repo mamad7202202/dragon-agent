@@ -33,6 +33,26 @@ pub enum Cmd {
         #[arg(long)]
         no_tools: bool,
     },
+    /// Quick setup from a built-in preset
+    Setup {
+        /// google | openrouter | openai | anthropic | groq | deepseek | ollama |
+        /// lmstudio | custom (requires --url)
+        #[arg(long)]
+        preset: String,
+        #[arg(long)]
+        key: Option<String>,
+        #[arg(long = "key-env")]
+        key_env: Option<String>,
+        /// Base URL when --preset custom
+        #[arg(long)]
+        url: Option<String>,
+        /// Model id override (defaults to the preset's first model)
+        #[arg(long = "model")]
+        model: Option<String>,
+        /// Provider name override (default: preset name)
+        #[arg(long)]
+        name: Option<String>,
+    },
     /// List configured providers and their models
     Models,
     /// Register a provider + models (bring your own key)
@@ -82,25 +102,107 @@ pub enum MemoryCmd {
 
 pub fn setup_instructions() -> String {
     format!(
-        "add your first model (your key stays in {}):\n  \
-         dragon model add openai https://api.openai.com/v1 \\\n    \
-           --key sk-... --model gpt-4o-mini --default gpt-4o-mini/openai\n\n\
-         works with anything OpenAI-compatible:\n  \
-           OpenRouter   https://openrouter.ai/api/v1\n  \
-           Groq         https://api.groq.com/openai/v1\n  \
-           DeepSeek     https://api.deepseek.com/v1\n  \
-           Ollama       http://localhost:11434/v1      (--key ollama)\n  \
-           LM Studio    http://localhost:1234/v1\n\n\
-         or Anthropic native protocol:\n  \
-           dragon model add anthropic https://api.anthropic.com \\\n    \
-             --key sk-ant-... --kind anthropic --model claude-sonnet-4",
+        "quickest - use a preset:\n  \
+         dragon setup --preset google --key AIza...      Google AI Studio (Gemini)\n  \
+         dragon setup --preset openrouter --key sk-or-...\n  \
+         dragon setup --preset anthropic --key sk-ant-...\n  \
+         dragon setup --preset ollama                    local models, no cloud\n\n\
+         presets: google | openrouter | openai | anthropic | groq | deepseek | ollama | lmstudio\n\
+         custom endpoint:\n  \
+         dragon setup --preset custom --url https://my.box/v1 --key k --model m1\n\n\
+         or just run `dragon` and the interactive /setup wizard walks you through it.\n\
+         config lives at {}",
         Config::path().display()
     )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn setup_preset(
+    preset: &str,
+    key: Option<String>,
+    key_env: Option<String>,
+    url: Option<String>,
+    model: Option<String>,
+    name: Option<String>,
+) -> Result<()> {
+    let mut cfg = Config::load()?;
+
+    let (pname, base_url, kind, default_models, note): (
+        String,
+        String,
+        &'static str,
+        Vec<String>,
+        &'static str,
+    ) = if preset.eq_ignore_ascii_case("custom") {
+        let u = url.clone().ok_or_else(|| {
+            anyhow::anyhow!("--preset custom requires --url <base-url>")
+        })?;
+        let k = if u.contains("anthropic") { "anthropic" } else { "openai" };
+        (
+            name.clone().unwrap_or_else(|| "custom".into()),
+            u.trim_end_matches('/').to_string(),
+            k,
+            vec![],
+            "",
+        )
+    } else {
+        let p = crate::presets::find(preset)
+            .with_context(|| format!("unknown preset '{preset}'"))?;
+        (
+            name.clone().unwrap_or_else(|| p.name.to_string()),
+            p.base_url.to_string(),
+            p.kind,
+            p.models.iter().map(|m| m.to_string()).collect(),
+            p.note,
+        )
+    };
+
+    let model_id = match model {
+        Some(m) => m,
+        None => default_models.first().cloned().ok_or_else(|| {
+            anyhow::anyhow!("no preset model available - pass --model <id>")
+        })?,
+    };
+
+    let api_key = match (&key, &key_env) {
+        (Some(k), _) => k.clone(),
+        (None, Some(env)) => {
+            std::env::var(env).with_context(|| format!("env var {env} is not set"))?
+        }
+        _ => String::new(),
+    };
+
+    if !note.is_empty() {
+        println!("note: {note}");
+    }
+
+    let spec = format!("{pname}/{model_id}");
+    // replace existing provider with same name
+    cfg.providers.retain(|p| p.name != pname);
+    cfg.providers.push(ProviderCfg {
+        name: pname,
+        base_url,
+        api_key,
+        kind: Some(kind.to_string()),
+        models: vec![model_id],
+    });
+    cfg.default_model = Some(spec.clone());
+    cfg.save()?;
+    println!("saved '{spec}'.\nrun `dragon` to start chatting.");
+    Ok(())
 }
 
 pub async fn dispatch(cmd: Cmd, model_override: Option<String>) -> Result<()> {
     match cmd {
         Cmd::Run { prompt, no_tools } => run_oneshot(&prompt, model_override, !no_tools).await?,
+        Cmd::Setup {
+            preset,
+            key,
+            key_env,
+            url,
+            model,
+            name,
+        } => setup_preset(&preset, key, key_env, url, model, name)?,
         Cmd::Models => models_list()?,
         Cmd::ModelAdd {
             name,

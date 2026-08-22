@@ -209,14 +209,21 @@ fn welcome_lines(area: Rect) -> Vec<Line<'static>> {
 // -------------------------------------------------------------------- input
 
 fn draw_input(f: &mut Frame, app: &App, area: Rect) {
-    let border_color = if app.busy { SCALE } else { EMBER };
+    let setup = app.wizard.is_some();
+    let border_color = if app.busy {
+        SCALE
+    } else if setup {
+        GOLD
+    } else {
+        EMBER
+    };
     let block = Block::bordered()
         .border_set(border::ROUNDED)
         .border_style(style_fg(border_color))
         .style(Style::new().bg(NIGHT))
         .title(Span::styled(
-            " prompt ",
-            Style::new().fg(ASH),
+            if setup { " setup " } else { " prompt " },
+            Style::new().fg(if setup { GOLD } else { ASH }),
         ));
     let inner = block.inner(area);
     f.render_widget(block, area);

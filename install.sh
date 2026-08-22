@@ -1,0 +1,46 @@
+#!/bin/sh
+# Dragon Agent installer - Linux / macOS
+#   curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh
+
+set -eu
+
+REPO="mamad7202202/dragon-agent"
+TAG="latest"
+
+os=$(uname -s)
+arch=$(uname -m)
+
+case "$os" in
+    Linux)  os="linux" ;;
+    Darwin) os="macos" ;;
+    *) echo "unsupported OS: $os" >&2; exit 1 ;;
+esac
+
+case "$arch" in
+    x86_64|amd64)      arch="x86_64" ;;
+    arm64|aarch64)     arch="aarch64" ;;
+    *) echo "unsupported architecture: $arch" >&2; exit 1 ;;
+esac
+
+file="dragon-$arch-$os"
+url="https://github.com/$REPO/releases/download/$TAG/$file"
+dest="${DRAGON_INSTALL_DIR:-$HOME/.local/bin}"
+
+echo "dragon installer"
+echo "  from : $url"
+echo "  to   : $dest/dragon"
+
+mkdir -p "$dest"
+curl -fsSL "$url" -o "$dest/dragon"
+chmod +x "$dest/dragon"
+
+case ":$PATH:" in
+    *":$dest:"*) : ;;
+    *) echo ""
+       echo "NOTE: $dest is not on your PATH. Add this to ~/.zshrc or ~/.bashrc:"
+       echo "  export PATH=\"$dest:\$PATH\"" ;;
+esac
+
+echo ""
+echo "installed -> $dest/dragon"
+echo "run: dragon"

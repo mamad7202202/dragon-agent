@@ -36,32 +36,51 @@ Most terminal agents forget everything the moment a session ends. Dragon Agent i
 
 ## Install
 
-Grab a prebuilt binary from [Actions artifacts](../../actions) or build yourself:
+One line — Linux & macOS:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex
+```
+
+Both pull the raw executable straight from the rolling [`latest` release](https://github.com/mamad7202202/dragon-agent/releases/tag/latest), which is refreshed automatically on every build.
+
+Or with cargo:
 
 ```bash
 cargo install --git https://github.com/mamad7202202/dragon-agent
 ```
 
+**Try the interactive demo in your browser first:** [mamad7202202.github.io/dragon-agent](https://mamad7202202.github.io/dragon-agent/) *(static page, runs entirely client-side)*
+
 ## Quick start
 
+On first launch `dragon` opens an **interactive setup wizard**: pick a provider from the list, paste your key, choose a model — done. The key is stored only on your machine.
+
+Prefer the terminal? Presets make it a single command:
+
 ```bash
-# 1. register any OpenAI-compatible provider
-dragon model add openrouter https://openrouter.ai/api/v1 \
-  --key sk-or-... --model anthropic/claude-sonnet-4 --default anthropic/claude-sonnet-4
+# Google AI Studio (Gemini) - free tier available
+dragon setup --preset google --key AIza...
 
-# local models work too - no cloud needed
-dragon model add ollama http://localhost:11434/v1 --key ollama --model llama3.1
+# OpenRouter - 400+ models behind one key
+dragon setup --preset openrouter --key sk-or-...
 
-# or Anthropic's native protocol
-dragon model add anthropic https://api.anthropic.com \
-  --key sk-ant-... --kind anthropic --model claude-sonnet-4
+# local models - no cloud at all
+dragon setup --preset ollama
 
-# 2. launch
-dragon
-
-# one-shot mode
-dragon run "explain this repo in 5 bullet points"
+# any other OpenAI-compatible endpoint
+dragon setup --preset custom --url https://my.box/v1 --key k --model m1
 ```
+
+Built-in presets: `google` · `openrouter` · `openai` · `anthropic` · `groq` · `deepseek` · `ollama` · `lmstudio`
+
+Switch models any time inside the TUI (`/model`, `/setup`) or mix providers freely — each provider keeps its own key and model list.
 
 Inside the TUI:
 
@@ -150,7 +169,7 @@ Requires Rust 1.75+:
 cargo build --release
 ```
 
-GitHub Actions builds `windows-x64`, `linux-x64` and `macos-arm64` on every push; tags starting with `v` are published as releases automatically.
+GitHub Actions builds raw executables for `windows-x64`, `linux-x64` and `macos-arm64` on every push — attached directly (no archives) to the rolling [`latest` release](https://github.com/mamad7202202/dragon-agent/releases/tag/latest). Version tags starting with `v` get their own formal release.
 
 ## Roadmap
 

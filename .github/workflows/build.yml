@@ -13,26 +13,20 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.os }} / ${{ matrix.target }}
+    name: ${{ matrix.target }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact: dragon-windows-x64
-            ext: .exe
-            pack: zip
+            artifact: dragon-x86_64-windows.exe
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact: dragon-linux-x64
-            ext: ""
-            pack: tar
+            artifact: dragon-x86_64-linux
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact: dragon-macos-arm64
-            ext: ""
-            pack: zip
+            artifact: dragon-aarch64-macos
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -50,41 +44,83 @@ jobs:
       - name: Build release
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package (zip)
-        if: matrix.pack == 'zip'
+      - name: Stage raw executable
         shell: pwsh
         run: |
-          Compress-Archive -Path "target/${{ matrix.target }}/release/dragon${{ matrix.ext }}" `
-            -DestinationPath "${{ matrix.artifact }}.zip"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/dragon${{ runner.os == 'Windows' && '.exe' || '' }}" "dist/${{ matrix.artifact }}"
 
-      - name: Package (tar.gz)
-        if: matrix.pack == 'tar'
-        run: |
-          chmod +x "target/${{ matrix.target }}/release/dragon"
-          tar -czf "${{ matrix.artifact }}.tar.gz" -C "target/${{ matrix.target }}/release" dragon
-
-      - name: Upload artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: |
-            ${{ matrix.artifact }}.zip
-            ${{ matrix.artifact }}.tar.gz
+          name: bin-${{ matrix.target }}
+          path: dist/*
           if-no-files-found: error
 
+  # Rolling "latest" release refreshed on every push to main.
+  # Install scripts fetch binaries straight from this release.
+  nightly:
+    name: Publish latest (rolling)
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all executables
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: dist
+
+      - name: Make unix binaries executable
+        run: |
+          chmod +x dist/dragon-x86_64-linux dist/dragon-aarch64-macos
+
+      - name: Publish to "latest" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build (auto)
+          prerelease: true
+          files: dist/*
+          overwrite_files: true
+          allow_updates: true
+          body: |
+            Rolling build of `main`. Raw executables, no archives.
+
+            | file | platform |
+            |---|---|
+            | `dragon-x86_64-windows.exe` | Windows 10/11 x64 |
+            | `dragon-x86_64-linux` | Linux x64 (glibc) |
+            | `dragon-aarch64-macos` | macOS Apple Silicon |
+
+            Install with one line:
+            ```sh
+            curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh
+            ```
+            ```powershell
+            irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex
+            ```
+
+  # Formal releases for version tags.
   release:
-    name: Release
+    name: Release ${{ github.ref_name }}
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download artifacts
+      - name: Download all executables
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: dist
+
+      - name: Make unix binaries executable
+        run: |
+          chmod +x dist/dragon-x86_64-linux dist/dragon-aarch64-macos
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

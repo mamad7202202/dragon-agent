@@ -196,7 +196,7 @@ impl App {
                     let compact_after = self.config.settings.compaction_messages;
                     match &self.agent {
                         Some(ag) => {
-                            ag.lock().await.set_model(p, model_id);
+                            ag.lock().await.set_model(p, &model_id);
                         }
                         None => {
                             self.agent = Some(Arc::new(tokio::sync::Mutex::new(Agent::new(
@@ -349,6 +349,7 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
     match config.resolve_model(model_override.as_deref()) {
         Ok((pcfg, model_id)) => {
             let p = provider::build(pcfg)?;
+            let spec = format!("{}/{}", pcfg.name, model_id);
             let agent = Agent::new(
                 p,
                 model_id,
@@ -356,8 +357,8 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
                 config.settings.allow_commands,
                 config.settings.compaction_messages,
             );
-            app.model_spec = format!("{}/{}", pcfg.name, model_id);
             app.agent = Some(Arc::new(tokio::sync::Mutex::new(agent)));
+            app.model_spec = spec;
         }
         Err(_) => {
             app.status = "no model configured".into();

@@ -1,3 +1,6 @@
+// context compaction lives in its own module
+pub mod compact;
+
 //! Hybrid memory system.
 //!
 //! Three cooperating layers:

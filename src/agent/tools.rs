@@ -132,7 +132,7 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
         "list_files" => {
             let p = args.get("path").and_then(|x| x.as_str()).unwrap_or(".").to_string();
             let mut lines = Vec::new();
-            walk(PathBuf::from(&p), 0, 3, &mut |entry| {
+            walk(&PathBuf::from(&p), 0, 3, &mut |entry| {
                 lines.push(entry);
             })?;
             if lines.is_empty() {
@@ -243,7 +243,7 @@ fn walk(dir: &PathBuf, depth: usize, max_depth: usize, f: &mut impl FnMut(String
 fn grep_impl(dir: &str, pattern: &str) -> Result<String> {
     let re = regex::Regex::new(pattern).context("invalid regex pattern")?;
     let mut files = Vec::new();
-    walk(PathBuf::from(dir), 0, 6, &mut |f| files.push(f))?;
+    walk(&PathBuf::from(dir), 0, 6, &mut |f| files.push(f))?;
 
     let mut hits: Vec<String> = Vec::new();
     'files: for f in files {

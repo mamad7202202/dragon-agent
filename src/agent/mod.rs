@@ -2,6 +2,7 @@
 
 pub mod tools;
 
+use crate::memory::compact;
 use crate::memory::MemoryStore;
 use crate::provider::{LlmProvider, Message, StreamEvent};
 use anyhow::{bail, Result};

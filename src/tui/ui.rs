@@ -75,8 +75,8 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
         .border_set(border::ROUNDED)
         .border_style(style_fg(SCALE))
         .style(Style::new().bg(NIGHT));
-    f.render_widget(block, area);
     let inner = block.inner(area);
+    f.render_widget(block, area);
     let [left, right] =
         Layout::horizontal([Constraint::Min(20), Constraint::Length(26)]).areas(inner);
 
@@ -158,18 +158,22 @@ fn draw_transcript(f: &mut Frame, app: &mut App, area: Rect) {
         app.scroll_offset.min(lines.len().saturating_sub(1))
     };
 
+    let frame_block = Block::bordered()
+        .border_set(border::ROUNDED)
+        .border_style(style_fg(SCALE))
+        .style(Style::new().bg(NIGHT))
+        .title(Span::styled(
+            format!(" {} ", app.status),
+            Style::new().fg(if app.busy { FLAME } else { ASH }),
+        ));
+    f.render_widget(&frame_block, area);
+    let chat_area = frame_block.inner(area);
+
     f.render_widget(
         Paragraph::new(lines)
             .wrap(Wrap { trim: false })
             .scroll((offset as u16, 0)),
-        Block::bordered()
-            .border_set(border::ROUNDED)
-            .border_style(style_fg(SCALE))
-            .style(Style::new().bg(NIGHT))
-            .title(Span::styled(
-                format!(" {} ", app.status),
-                Style::new().fg(if app.busy { FLAME } else { ASH }),
-            )),
+        chat_area,
     );
 }
 
@@ -218,11 +222,11 @@ fn draw_input(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(block, area);
 
     let prefix = "> ";
-    let spans = vec![
+    let spans = Line::from(vec![
         Span::styled(prefix, style_fg(EMBER).add_modifier(Modifier::BOLD)),
         Span::styled(app.input.clone(), style_fg(BONE)),
         Span::styled("█", style_fg(BONE)), // cursor approximation
-    ];
+    ]);
     f.render_widget(Paragraph::new(spans), inner);
 
     // place the real terminal cursor at end of text

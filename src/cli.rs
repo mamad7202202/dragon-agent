@@ -119,7 +119,7 @@ pub async fn dispatch(cmd: Cmd, model_override: Option<String>) -> Result<()> {
                 bail!("provider '{name}' not found");
             }
             if let Some(d) = &cfg.default_model {
-                if d.split_once('/').map(|(p, _)| p) == Some(&name) {
+                if d.split_once('/').map(|(p, _)| p) == Some(name.as_str()) {
                     cfg.default_model = None;
                 }
             }

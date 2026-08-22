@@ -69,7 +69,7 @@ impl App {
                 self.should_quit = true;
             }
             KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.new_session()?;
+                self.new_session().await?;
             }
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.input.clear();
@@ -109,7 +109,7 @@ impl App {
             return Ok(());
         };
         if self.busy {
-            self.say(Entry::System("dragon is still working - one thing at a time."));
+            self.say(Entry::System("dragon is still working - one thing at a time.".to_string()));
             return Ok(());
         }
 
@@ -152,10 +152,13 @@ impl App {
                 if rest.is_empty() {
                     self.say(Entry::System("usage: /remember <fact>".into()));
                 } else {
-                    let mut mem = self.memory.lock().unwrap();
-                    let f = mem.add(rest, &["manual".to_string()], 0.85);
-                    let _ = mem.save();
-                    self.say(Entry::System(format!("saved [{}] {}", f.id, f.content)));
+                    let fact = {
+                        let mut mem = self.memory.lock().unwrap();
+                        let f = mem.add(rest, &["manual".to_string()], 0.85);
+                        let _ = mem.save();
+                        format!("saved [{}] {}", f.id, f.content)
+                    };
+                    self.say(Entry::System(fact));
                 }
             }
             "memories" => {
@@ -172,11 +175,12 @@ impl App {
                 }
             }
             "forget" => {
-                let removed = self.memory.lock().unwrap().remove(rest);
-                let _ = self.memory.lock().unwrap().save();
-                self.say(Entry::System(
-                    if removed { "forgotten.".into() } else { "no matching id.".into() },
-                ));
+                let msg = {
+                    let removed = self.memory.lock().unwrap().remove(rest);
+                    let _ = self.memory.lock().unwrap().save();
+                    if removed { "forgotten.".to_string() } else { "no matching id.".to_string() }
+                };
+                self.say(Entry::System(msg));
             }
             other => self.say(Entry::System(format!(
                 "unknown '/{other}' - try /help"

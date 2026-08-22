@@ -99,7 +99,7 @@ impl Config {
     /// Resolve a model spec ("provider/model", possibly with more slashes) to
     /// a concrete provider + model id. `None` falls back to default_model,
     /// then to the single configured provider if there is exactly one.
-    pub fn resolve_model(&self, spec: Option<&str>) -> Result<(&ProviderCfg, &str)> {
+    pub fn resolve_model(&self, spec: Option<&str>) -> Result<(&ProviderCfg, String)> {
         let spec = spec.or(self.default_model.as_deref());
 
         let (prov_name, model_id) = match spec {
@@ -136,7 +136,7 @@ impl Config {
         let prov = self
             .find_provider(&prov_name)
             .with_context(|| format!("provider '{prov_name}' not found"))?;
-        Ok((prov, &model_id))
+        Ok((prov, model_id))
     }
 
     pub fn provider_names(&self) -> Vec<String> {

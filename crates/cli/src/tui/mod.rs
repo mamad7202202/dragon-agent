@@ -425,7 +425,12 @@ impl App {
     /// Options for the currently active wizard step (rendered + navigable).
     pub fn wizard_rows(&self) -> Vec<String> {
         let Some(w) = &self.wizard else { return vec![] };
-        match w.step {
+        Self::rows_for(w.step, &w.models, &w.added_models)
+    }
+
+    /// Pure helper so the feed loop can compute rows while holding `&mut Wizard`.
+    fn rows_for(step: &str, models: &[String], added: &[String]) -> Vec<String> {
+        match step {
             "provider" => {
                 let mut v: Vec<String> = dragon_core::presets::PRESETS
                     .iter()
@@ -435,16 +440,14 @@ impl App {
                 v
             }
             "model" => {
-                let mut v: Vec<String> =
-                    w.models.iter().map(|m| m.clone()).collect();
+                let mut v: Vec<String> = models.to_vec();
                 v.push("+ type a different model id".to_string());
                 v
             }
             "more" => {
-                let mut v: Vec<String> = w
-                    .models
+                let mut v: Vec<String> = models
                     .iter()
-                    .filter(|m| !w.added_models.contains(m))
+                    .filter(|m| !added.contains(m))
                     .cloned()
                     .collect();
                 v.push("+ type another model id".to_string());
@@ -464,7 +467,7 @@ impl App {
                 "provider" => {
                     let choice = if via_row {
                         let idx = self.wizard_row;
-                        let rows = self.wizard_rows();
+                        let rows = Self::rows_for("provider", &[], &[]);
                         rows.get(idx).cloned().unwrap_or_default()
                     } else {
                         line.trim().to_ascii_lowercase()
@@ -534,7 +537,8 @@ impl App {
                     }
                 }
                 "more" => {
-                    let rows = self.wizard_rows();
+                    let rows =
+                        Self::rows_for("more", &w.models, &w.added_models);
                     if via_row {
                         let sel = rows.get(self.wizard_row).cloned().unwrap_or_default();
                         if sel.starts_with("finish") {

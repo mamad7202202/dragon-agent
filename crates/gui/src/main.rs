@@ -176,7 +176,7 @@ impl DragonApp {
                     guard.turn(&t, atx).await
                 })
             };
-            while let Ok(ev) = arx.recv().await {
+            while let Some(ev) = arx.recv().await {
                 let _ = tx.send(GuiEvent::Agent(ev));
             }
             let res = match job.await {
@@ -343,7 +343,9 @@ impl eframe::App for DragonApp {
 
         if let Some((msg, ttl)) = &mut self.toast {
             let rect = ctx.screen_rect();
-            ctx.painter().rect_filled(
+            let painter =
+                ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, egui::Id::new("toast")));
+            painter.rect_filled(
                 egui::Rect::from_center_size(
                     egui::pos2(rect.center().x, rect.bottom() - 42.0),
                     egui::vec2(rect.width() * 0.6, 34.0),
@@ -351,7 +353,7 @@ impl eframe::App for DragonApp {
                 8.0,
                 SMOKE,
             );
-            ctx.painter().text(
+            painter.text(
                 egui::pos2(rect.center().x, rect.bottom() - 42.0),
                 egui::Align2::CENTER_CENTER,
                 msg,
@@ -365,8 +367,6 @@ impl eframe::App for DragonApp {
             ctx.request_repaint();
         }
     }
-
-    fn on_exit(&mut self) {}
 }
 
 impl DragonApp {
@@ -404,12 +404,10 @@ impl DragonApp {
         ] {
             let selected = self.tab == tab;
             if ui
-                .add(
-                    egui::SelectableLabel::new(
-                        egui::RichText::new(icon_label).color(if selected { EMBER } else { ASH }),
-                    )
-                    .selected(selected),
-                )
+                .add(egui::SelectableLabel::new(
+                    selected,
+                    egui::RichText::new(icon_label).color(if selected { EMBER } else { ASH }),
+                ))
                 .clicked()
             {
                 self.tab = tab;
@@ -891,7 +889,7 @@ fn bubble(ui: &mut egui::Ui, role: &str, color: egui::Color32, text: &str) {
     egui::Frame::none()
         .fill(egui::Color32::from_rgb(24, 23, 27))
         .rounding(6.0)
-        .inner_margin(egui::Margin::symmetric(10, 7))
+        .inner_margin(egui::Margin::symmetric(10.0, 7.0))
         .show(ui, |ui| {
             ui.set_min_width(ui.available_width());
             ui.label(egui::RichText::new(text).color(BONE));

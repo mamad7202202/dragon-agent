@@ -1129,7 +1129,7 @@ const HELP: &str = "commands:
   /remember [global] <fact>  pin a fact (session or global scope)
   /memories                  list stored facts
   /forget <id-prefix>        delete a fact
-  /clear · /new · /quit      view / fresh session / exit
+  /clear Â· /new Â· /quit      view / fresh session / exit
 
 editing: left/right caret - ctrl+left/right word - home/end
 keys: enter send - shift+enter newline - pgup/pgdn scroll

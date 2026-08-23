@@ -6,6 +6,7 @@
 use dragon_core::agent::{Agent, AgentEvent, Mode};
 use dragon_core::config::{Config, ProviderCfg};
 use dragon_core::memory::MemoryStore;
+use dragon_core::presets;
 use dragon_core::provider;
 use dragon_core::session::{self, SessionLog};
 use serde::Serialize;
@@ -429,12 +430,15 @@ fn sessions(s: State<'_, Shared>) -> Vec<SessionView> {
     session::list_sessions()
         .into_iter()
         .take(30)
-        .map(|(_p, meta)| SessionView {
-            id: meta.id,
-            title: meta.title,
-            model: meta.model,
-            created_at: meta.created_at.chars().take(16).collect::<String>().replace('T', " "),
-            current: meta.id == cur,
+        .map(|(_p, meta)| {
+            let current = meta.id == cur;
+            SessionView {
+                id: meta.id,
+                title: meta.title,
+                model: meta.model,
+                created_at: meta.created_at.chars().take(16).collect::<String>().replace('T', " "),
+                current,
+            }
         })
         .collect()
 }
@@ -445,7 +449,7 @@ fn new_session(mode: String, s: State<'_, Shared>) -> Result<(), String> {
     let model = s.model_spec.lock().unwrap().clone();
     let log = SessionLog::create(&model).map_err(|e| format!("{e:#}"))?;
     let id = log.meta().id.clone();
-    *s.session_id.lock().unwrap() = id;
+    *s.session_id.lock().unwrap() = id.clone();
     *s.mode.lock().unwrap() = m;
     if let Some(ag) = &*s.agent.lock().unwrap() {
         if let Ok(mut g) = ag.try_lock() {

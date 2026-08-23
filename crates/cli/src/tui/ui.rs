@@ -76,6 +76,22 @@ pub(super) fn entry_lines(entry: &Entry) -> Vec<Line<'static>> {
             Span::styled(name.clone(), fg(VIOLET).add_modifier(Modifier::BOLD)),
             Span::styled(format!(" {detail}"), fg(ASH)),
         ])],
+        Entry::Approval { tool, detail } => vec![
+            Line::from(vec![
+                Span::raw("  "),
+                Span::styled(
+                    "PERMISSION ".to_string(),
+                    fg(GOLD).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(tool.clone(), fg(FLAME).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("  {detail}"), fg(BONE)),
+            ]),
+            Line::from(Span::styled(
+                "     [y] allow   [a] always allow   [n] deny   [d] what does this do?".to_string(),
+                fg(SCALE),
+            )),
+            Line::from(""),
+        ],
         Entry::System(text) => text
             .lines()
             .map(|l| {
@@ -110,6 +126,7 @@ fn labeled_block(label: &str, color: ratatui::style::Color, text: &str) -> Vec<L
 }
 
 fn draw_transcript(f: &mut Frame, app: &mut App, area: Rect) {
+    app.areas.body = area;
     let frame_block = Block::bordered()
         .border_set(border::ROUNDED)
         .border_style(fg(SCALE))
@@ -217,7 +234,14 @@ fn welcome_lines(area: Rect) -> Vec<Line<'static>> {
 
 // ------------------------------------------------------------------ wizard
 
-fn draw_wizard(f: &mut Frame, app: &App, rows: &[String], area: Rect) {
+fn draw_wizard(f: &mut Frame, app: &mut App, rows: &[String], area: Rect) {
+    app.areas.wizard = area;
+    let area = {
+        // record for mouse hit-testing (interior-mutability-free pattern:
+        // App is passed as &mut from draw())
+        area
+    };
+    record_wizard_area(app, area);
     let block = Block::bordered()
         .border_set(border::ROUNDED)
         .border_style(fg(GOLD))
@@ -233,7 +257,7 @@ fn draw_wizard(f: &mut Frame, app: &App, rows: &[String], area: Rect) {
             fg(GOLD),
         ));
     let inner = block.inner(area);
-    f.render_widget(block, area);
+    f.render_widget(&block, area);
 
     // window the list so the selected row stays visible
     let vis = inner.height as usize;
@@ -244,6 +268,7 @@ fn draw_wizard(f: &mut Frame, app: &App, rows: &[String], area: Rect) {
         0
     };
     let end = (start + vis).min(rows.len());
+    app.wizard_top = start;
 
     let mut lines: Vec<Line> = Vec::new();
     for (i, row) in rows[start..end].iter().enumerate() {
@@ -268,7 +293,8 @@ fn draw_wizard(f: &mut Frame, app: &App, rows: &[String], area: Rect) {
 
 // -------------------------------------------------------------------- input
 
-fn draw_input(f: &mut Frame, app: &App, area: Rect) {
+fn draw_input(f: &mut Frame, app: &mut App, area: Rect) {
+    app.areas.input = area;
     let setup = app.wizard.is_some();
     let border_color = if setup {
         GOLD
@@ -316,12 +342,13 @@ fn draw_input(f: &mut Frame, app: &App, area: Rect) {
 
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let left = if app.wizard.is_some() {
-        " setup mode - answer in the box below".to_string()
+        " setup - answer below (up/down + space)".to_string()
     } else if app.busy {
         " esc stop · pgup/pgdn scroll".to_string()
     } else {
         " enter send · ctrl+n new chat · esc quit".to_string()
     };
+    let left = format!("[{}] {}", app.mode.as_str(), left);
     let left = match &app.update_note {
         Some(note) => format!("{left}  ·  ⭡ {note}"),
         None => left,

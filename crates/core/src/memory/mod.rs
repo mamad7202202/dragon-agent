@@ -29,6 +29,10 @@ pub struct Fact {
     pub created_at: String,
     #[serde(default)]
     pub hits: u32,
+    /// Some(session-id) when the fact belongs to a single conversation.
+    /// None = global, cross-session knowledge.
+    #[serde(default)]
+    pub session: Option<String>,
 }
 
 fn default_importance() -> f32 {
@@ -63,13 +67,22 @@ impl MemoryStore {
     }
 
     pub fn add(&mut self, content: &str, tags: &[String], importance: f32) -> Fact {
-        // de-dup: near-identical content refreshes instead of piling up
+        self.add_scoped(content, tags, importance, None)
+    }
+
+    /// Add a fact scoped to one session (or global when `session` is None).
+    pub fn add_scoped(
+        &mut self,
+        content: &str,
+        tags: &[String],
+        importance: f32,
+        session: Option<&str>,
+    ) -> Fact {
+        // de-dup within the same scope: near-identical content refreshes
         let norm = normalize(content);
-        if let Some(existing) = self
-            .facts
-            .iter_mut()
-            .find(|f| normalize(&f.content) == norm)
-        {
+        if let Some(existing) = self.facts.iter_mut().find(|f| {
+            f.session.as_deref() == session && normalize(&f.content) == norm
+        }) {
             existing.importance = existing.importance.max(importance);
             for t in tags {
                 if !existing.tags.contains(t) {
@@ -85,6 +98,7 @@ impl MemoryStore {
             importance: importance.clamp(0.0, 1.0),
             created_at: chrono::Local::now().to_rfc3339(),
             hits: 0,
+            session: session.map(|s| s.to_string()),
         };
         self.facts.push(fact.clone());
         fact
@@ -107,6 +121,18 @@ impl MemoryStore {
     /// Recall the most relevant facts for a query, blending lexical relevance
     /// with importance and recency. Bumps hit counters on the winners.
     pub fn recall(&mut self, query: &str, k: usize) -> Vec<Fact> {
+        self.recall_mixed(query, k, None)
+    }
+
+    /// Scope-aware recall: facts from the current session get a relevance
+    /// boost, global knowledge stays available in the same ranking. This is
+    /// the token-efficient path - only `k` winners ever reach the prompt.
+    pub fn recall_mixed(
+        &mut self,
+        query: &str,
+        k: usize,
+        current_session: Option<&str>,
+    ) -> Vec<Fact> {
         let q_tokens = tokenize(query);
         if q_tokens.is_empty() || self.facts.is_empty() {
             return Vec::new();
@@ -126,7 +152,14 @@ impl MemoryStore {
                 .map(|t| (now - t.with_timezone(&chrono::Local)).num_days().max(0) as f32)
                 .unwrap_or(0.0);
             let recency = 1.0 / (1.0 + age_days / 14.0); // two-week half-life-ish
-            let score = rel * (0.55 + 0.45 * fact.importance) * (0.7 + 0.3 * recency);
+            // session-local knowledge is the most likely to matter right now
+            let scope_boost = match (&fact.session, current_session) {
+                (Some(s), Some(cur)) if s == cur => 1.35,
+                (Some(_), _) => 0.85, // other sessions' leftovers sink
+                _ => 1.0,
+            };
+            let score =
+                rel * (0.55 + 0.45 * fact.importance) * (0.7 + 0.3 * recency) * scope_boost;
             scored.push((score, i));
         }
         scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
@@ -150,6 +183,25 @@ impl MemoryStore {
         let mut s = String::from("[REMEMBERED FACTS]\n");
         for f in facts {
             s.push_str(&format!("- {}\n", f.content));
+        }
+        Some(s)
+    }
+
+    /// Prompt block mixing session-scoped and global knowledge.
+    pub fn recall_block_scoped(
+        &mut self,
+        query: &str,
+        k: usize,
+        current_session: Option<&str>,
+    ) -> Option<String> {
+        let facts = self.recall_mixed(query, k, current_session);
+        if facts.is_empty() {
+            return None;
+        }
+        let mut s = String::from("[REMEMBERED - relevant to this message]\n");
+        for f in facts {
+            let tag = if f.session.is_some() { "session" } else { "global" };
+            s.push_str(&format!("- ({tag}) {}\n", f.content));
         }
         Some(s)
     }
@@ -227,6 +279,7 @@ mod tests {
                 importance: 0.5,
                 created_at: chrono::Local::now().to_rfc3339(),
                 hits: 0,
+                session: None,
             });
         }
         m

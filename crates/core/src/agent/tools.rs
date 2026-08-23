@@ -1,4 +1,4 @@
-//! Built-in tools the agent can call, plus their execution.
+//! Built-in tools the agent can call, plus execution and access tiers.
 
 use crate::memory::MemoryStore;
 use anyhow::{bail, Context as _, Result};
@@ -8,7 +8,30 @@ use std::sync::{Arc, Mutex};
 
 pub struct ToolCtx {
     pub memory: Arc<Mutex<MemoryStore>>,
+    /// Master switch for the shell tool (legacy setting).
     pub allow_commands: bool,
+    /// Current conversation id - used to scope save_memory.
+    pub session_id: Option<String>,
+}
+
+/// Which approval tier a tool belongs to.
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum Tier {
+    /// Read-only, never needs permission.
+    ReadOnly,
+    /// Modifies the world - needs user approval unless auto-approved.
+    Gated,
+    /// Only available in agent mode.
+    AgentOnly,
+}
+
+pub fn tier_of(name: &str) -> Tier {
+    match name {
+        "read_file" | "list_files" | "grep" | "search_memory" | "fetch_url" => Tier::ReadOnly,
+        "save_memory" => Tier::ReadOnly,
+        "write_file" | "edit_file" | "delete_file" | "run_shell" => Tier::Gated,
+        _ => Tier::AgentOnly,
+    }
 }
 
 fn schema(props: Value, required: &[&str]) -> Value {
@@ -27,97 +50,110 @@ fn json_obj(pairs: &[(&str, Value)]) -> Value {
     Value::Object(m)
 }
 
-pub fn defs() -> Vec<crate::provider::ToolDef> {
+fn prop(ty: &str, desc: &str) -> Value {
+    json_obj(&[
+        ("type", Value::String(ty.into())),
+        ("description", Value::String(desc.into())),
+    ])
+}
+
+/// Tool list for the current mode. `allow_shell` reflects the settings gate.
+pub fn defs(mode: &crate::agent::Mode, allow_shell: bool) -> Vec<crate::provider::ToolDef> {
     use crate::provider::ToolDef;
-    vec![
+    let mut v = vec![
         ToolDef {
             name: "read_file".into(),
             description: "Read a text file from disk.".into(),
-            parameters: schema(
-                json_obj(&[(
-                    "path",
-                    json_obj(&[("type", Value::String("string".into())), ("description", Value::String("File path".into()))]),
-                )]),
-                &["path"],
-            ),
+            parameters: schema(json_obj(&[("path", prop("string", "File path"))]), &["path"]),
         },
         ToolDef {
             name: "write_file".into(),
             description: "Create or overwrite a file with the given content.".into(),
             parameters: schema(
-                json_obj(&[
-                    ("path", json_obj(&[("type", Value::String("string".into()))])),
-                    ("content", json_obj(&[("type", Value::String("string".into()))])),
-                ]),
+                json_obj(&[("path", prop("string", "File path")), ("content", prop("string", "Full file content"))]),
                 &["path", "content"],
             ),
         },
         ToolDef {
+            name: "edit_file".into(),
+            description: "Replace an exact snippet inside a file. Prefer this over write_file for small changes.".into(),
+            parameters: schema(
+                json_obj(&[
+                    ("path", prop("string", "File path")),
+                    ("old", prop("string", "Exact text to find")),
+                    ("new", prop("string", "Replacement text")),
+                ]),
+                &["path", "old", "new"],
+            ),
+        },
+        ToolDef {
+            name: "delete_file".into(),
+            description: "Delete a file. Irreversible.".into(),
+            parameters: schema(json_obj(&[("path", prop("string", "File path"))]), &["path"]),
+        },
+        ToolDef {
             name: "list_files".into(),
             description: "List files under a directory (recursive, depth-limited).".into(),
-            parameters: schema(
-                json_obj(&[(
-                    "path",
-                    json_obj(&[("type", Value::String("string".into())), ("description", Value::String("Directory path, defaults to '.'".into()))]),
-                )]),
-                &[],
-            ),
+            parameters: schema(json_obj(&[("path", prop("string", "Directory path, defaults to '.'"))]), &[]),
         },
         ToolDef {
             name: "grep".into(),
             description: "Search file contents with a regex. Returns matching lines as path:line: text.".into(),
             parameters: schema(
-                json_obj(&[
-                    ("pattern", json_obj(&[("type", Value::String("string".into()))])),
-                    ("path", json_obj(&[("type", Value::String("string".into())), ("description", Value::String("Directory to search, defaults to '.'".into()))])),
-                ]),
+                json_obj(&[("pattern", prop("string", "Regex")), ("path", prop("string", "Directory to search, defaults to '.'"))]),
                 &["pattern"],
             ),
         },
         ToolDef {
+            name: "fetch_url".into(),
+            description: "Fetch a web page or API endpoint (HTTP GET) and return its body as text.".into(),
+            parameters: schema(json_obj(&[("url", prop("string", "Absolute http(s) URL"))]), &["url"]),
+        },
+        ToolDef {
             name: "run_shell".into(),
-            description: "Run a shell command and return combined stdout/stderr. Requires user permission setting.".into(),
-            parameters: schema(
-                json_obj(&[("command", json_obj(&[("type", Value::String("string".into()))]))]),
-                &["command"],
-            ),
+            description: "Run a shell command and return combined stdout/stderr. Requires user approval unless pre-allowed.".into(),
+            parameters: schema(json_obj(&[("command", prop("string", "The command line to run"))]), &["command"]),
         },
         ToolDef {
             name: "save_memory".into(),
-            description: "Persist an important fact about the user or project to long-term memory. Use for stable preferences, project decisions, key facts - not transient chatter.".into(),
+            description: "Persist a fact to memory. Session facts describe THIS project/task; global facts are durable user preferences. Use scope=session by default; scope=global only for stable cross-project knowledge.".into(),
             parameters: schema(
                 json_obj(&[
-                    ("content", json_obj(&[("type", Value::String("string".into())), ("description", Value::String("The fact, stated concisely".into()))])),
-                    ("tags", json_obj(&[
-                        ("type", Value::String("array".into())),
-                        ("items", json_obj(&[("type", Value::String("string".into()))])),
-                    ])),
-                    ("importance", json_obj(&[("type", Value::String("number".into())), ("description", Value::String("0.0-1.0".into()))])),
+                    ("content", prop("string", "The fact, stated concisely")),
+                    ("scope", json_obj(&[("type", Value::String("string".into())), ("enum", serde_json::json!(["session","global"])), ("description", prop("", ""))])),
+                    ("importance", prop("number", "0.0-1.0")),
                 ]),
                 &["content"],
             ),
         },
         ToolDef {
             name: "search_memory".into(),
-            description: "Search long-term memory for relevant facts.".into(),
-            parameters: schema(
-                json_obj(&[("query", json_obj(&[("type", Value::String("string".into()))]))]),
-                &["query"],
-            ),
+            description: "Search long-term memory (both scopes) for relevant facts.".into(),
+            parameters: schema(json_obj(&[("query", prop("string", "What to look for"))]), &["query"]),
         },
-    ]
+    ];
+    if *mode == crate::agent::Mode::Plan {
+        // plan mode: research only
+        v.retain(|t| tier_of(&t.name) == Tier::ReadOnly);
+    }
+    if !allow_shell {
+        v.retain(|t| t.name != "run_shell");
+    }
+    v
 }
 
 const MAX_OUTPUT: usize = 6000;
 
+/// Execute a tool. Gated tools must be approved by the caller beforehand.
 pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<String> {
     let args: Value =
         serde_json::from_str(arguments).context("tool arguments are not valid JSON")?;
+
+
     let out = match name {
         "read_file" => {
             let p = arg_str(&args, "path")?;
-            let raw = std::fs::read_to_string(&p)
-                .with_context(|| format!("cannot read {p}"))?;
+            let raw = std::fs::read_to_string(&p).with_context(|| format!("cannot read {p}"))?;
             clip(raw)
         }
         "write_file" => {
@@ -128,6 +164,26 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
             }
             std::fs::write(&p, content).with_context(|| format!("cannot write {p}"))?;
             format!("wrote {} bytes to {p}", content.len())
+        }
+        "edit_file" => {
+            let p = arg_str(&args, "path")?;
+            let old = arg_str(&args, "old")?;
+            let new = arg_str(&args, "new")?;
+            let raw = std::fs::read_to_string(&p).with_context(|| format!("cannot read {p}"))?;
+            let count = raw.matches(old).count();
+            if count == 0 {
+                bail!("snippet not found in {p} - read the file first and copy exactly");
+            }
+            if count > 1 {
+                bail!("snippet appears {count} times in {p}; include more surrounding lines to make it unique");
+            }
+            std::fs::write(&p, raw.replacen(old, new, 1))?;
+            format!("edited {p} (1 replacement)")
+        }
+        "delete_file" => {
+            let p = arg_str(&args, "path")?;
+            std::fs::remove_file(&p).with_context(|| format!("cannot delete {p}"))?;
+            format!("deleted {p}")
         }
         "list_files" => {
             let p = args.get("path").and_then(|x| x.as_str()).unwrap_or(".").to_string();
@@ -146,42 +202,55 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
             let dir = args.get("path").and_then(|x| x.as_str()).unwrap_or(".").to_string();
             grep_impl(&dir, &pattern)?
         }
+        "fetch_url" => {
+            let url = arg_str(&args, "url")?;
+            fetch_impl(url).await?
+        }
         "run_shell" => {
             if !ctx.allow_commands {
-                bail!(
-                    "shell access is disabled. Enable it with:\n  \
-                     dragon settings set allow_commands true"
-                );
+                bail!("shell access is disabled in settings.");
             }
             let cmd = arg_str(&args, "command")?;
             run_command(&cmd).await?
         }
         "save_memory" => {
             let content = arg_str(&args, "content")?;
-            let tags: Vec<String> = args
-                .get("tags")
-                .and_then(|t| t.as_array())
+            let tags_src = args.get("tags").and_then(|t| t.as_array()).cloned();
+            let scope = args.get("scope").and_then(|s| s.as_str()).unwrap_or("session");
+            let importance = args.get("importance").and_then(|i| i.as_f64()).unwrap_or(0.6) as f32;
+            let mut tags: Vec<String> = tags_src
                 .map(|a| {
                     a.iter()
                         .filter_map(|v| v.as_str().map(|s| s.to_string()))
                         .collect()
                 })
                 .unwrap_or_default();
-            let importance =
-                args.get("importance").and_then(|i| i.as_f64()).unwrap_or(0.6) as f32;
-            let fact = ctx.memory.lock().unwrap().add(&content, &tags, importance);
+            tags.push(if scope == "global" { "global".into() } else { "session".into() });
+            let sid = if scope == "global" { None } else { ctx.session_id.clone() };
+            let fact = ctx.memory.lock().unwrap().add_scoped(&content, &tags, importance, sid.as_deref());
             ctx.memory.lock().unwrap().save()?;
-            format!("saved memory [{}] {}", fact.id, fact.content)
+            format!(
+                "saved {} memory [{}] {}",
+                if sid.is_some() { "session" } else { "global" },
+                fact.id,
+                fact.content
+            )
         }
         "search_memory" => {
             let q = arg_str(&args, "query")?;
-            let found = ctx.memory.lock().unwrap().recall(&q, 5);
+            let found = ctx
+                .memory
+                .lock()
+                .unwrap()
+                .recall_mixed(&q, 5, ctx.session_id.as_deref());
             if found.is_empty() {
                 "no matching memories".into()
             } else {
                 found
                     .iter()
-                    .map(|f| format!("[{}] {}", f.id, f.content))
+                    .map(|f| {
+                        format!("[{}]{} {}", f.id, if f.session.is_some() { "(s)" } else { "(g)" }, f.content)
+                    })
                     .collect::<Vec<_>>()
                     .join("\n")
             }
@@ -189,6 +258,25 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
         other => bail!("unknown tool '{other}'"),
     };
     Ok(clip(out))
+}
+
+/// Short human-readable summary used on approval cards.
+fn summarize_args(name: &str, args: &Value) -> String {
+    match name {
+        "write_file" | "read_file" | "delete_file" | "edit_file" => args
+            .get("path")
+            .and_then(|v| v.as_str())
+            .unwrap_or("?")
+            .to_string(),
+        "run_shell" => args
+            .get("command")
+            .and_then(|v| v.as_str())
+            .unwrap_or("?")
+            .chars()
+            .take(120)
+            .collect(),
+        _ => serde_json::to_string(args).unwrap_or_default(),
+    }
 }
 
 fn arg_str<'a>(args: &'a Value, key: &str) -> Result<&'a str> {
@@ -266,6 +354,28 @@ fn grep_impl(dir: &str, pattern: &str) -> Result<String> {
     } else {
         Ok(hits.join("\n"))
     }
+}
+
+async fn fetch_impl(url: &str) -> Result<String> {
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        bail!("only http(s) URLs are supported");
+    }
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("dragon-agent/", env!("CARGO_PKG_VERSION")))
+        .timeout(std::time::Duration::from_secs(15))
+        .build()?;
+    let resp = client.get(url).send().await.context("request failed")?;
+    let status = resp.status();
+    let headers = format!(
+        "status: {}\ncontent-type: {}\n\n",
+        status,
+        resp.headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("?")
+    );
+    let body = resp.text().await.unwrap_or_default();
+    Ok(clip(format!("{headers}{}", body.chars().take(MAX_OUTPUT).collect::<String>())))
 }
 
 async fn run_command(cmd: &str) -> Result<String> {

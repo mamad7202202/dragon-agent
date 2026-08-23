@@ -36,10 +36,25 @@ pub struct Settings {
     /// Allow the agent to run shell commands via its run_shell tool.
     #[serde(default)]
     pub allow_commands: bool,
+    /// Approval patterns that skip the prompt: "write_file" or "run_shell:npm".
+    #[serde(default)]
+    pub auto_approve: Vec<String>,
+    /// UI theme for the desktop app: "dark" | "light".
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    /// Mode used when a session starts.
+    #[serde(default = "default_mode")]
+    pub default_mode: String,
 }
 
 fn default_compaction() -> usize {
     36
+}
+fn default_theme() -> String {
+    "dark".into()
+}
+fn default_mode() -> String {
+    "agent".into()
 }
 
 impl Default for ProviderCfg {

@@ -20,16 +20,16 @@ jobs:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            cli: dragon-x86_64-windows.exe
-            gui: dragon-gui-x86_64-windows.exe
+            cli: dragon-windows-amd64.exe
+            gui: dragon-gui-windows-amd64.exe
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            cli: dragon-x86_64-linux
-            gui: dragon-gui-x86_64-linux
+            cli: dragon-linux-amd64
+            gui: dragon-gui-linux-amd64
           - os: macos-latest
             target: aarch64-apple-darwin
-            cli: dragon-aarch64-macos
-            gui: dragon-gui-aarch64-macos
+            cli: dragon-darwin-arm64
+            gui: dragon-gui-darwin-arm64
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -86,7 +86,7 @@ jobs:
           path: dist
 
       - name: Make unix binaries executable
-        run: chmod +x dist/dragon-*linux dist/dragon-*macos
+        run: chmod +x dist/dragon-*linux* dist/dragon-*darwin*
 
       - name: Generate checksums
         run: cd dist && sha256sum * > checksums.txt

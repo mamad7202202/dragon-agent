@@ -12,17 +12,17 @@ arch=$(uname -m)
 
 case "$os" in
     Linux)  os="linux" ;;
-    Darwin) os="macos" ;;
+    Darwin) os="darwin" ;;
     *) echo "unsupported OS: $os" >&2; exit 1 ;;
 esac
 
 case "$arch" in
-    x86_64|amd64)      arch="x86_64" ;;
-    arm64|aarch64)     arch="aarch64" ;;
+    x86_64|amd64)      arch="amd64" ;;
+    arm64|aarch64)     arch="arm64" ;;
     *) echo "unsupported architecture: $arch" >&2; exit 1 ;;
 esac
 
-file="dragon-$arch-$os"
+file="dragon-$os-$arch"
 url="https://github.com/$REPO/releases/latest/download/$file"
 dest="${DRAGON_INSTALL_DIR:-$HOME/.local/bin}"
 

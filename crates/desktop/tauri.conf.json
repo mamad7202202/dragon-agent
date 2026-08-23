@@ -10,11 +10,13 @@
     "windows": [
       {
         "title": "Dragon Agent",
-        "width": 1120,
-        "height": 740,
-        "minWidth": 820,
-        "minHeight": 560,
-        "center": true
+        "width": 1160,
+        "height": 760,
+        "minWidth": 860,
+        "minHeight": 580,
+        "center": true,
+        "decorations": false,
+        "transparent": false
       }
     ],
     "security": {

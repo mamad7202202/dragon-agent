@@ -267,6 +267,10 @@ async fn run_oneshot(prompt: &str, model_override: Option<String>, tools: bool) 
                 AgentEvent::ApprovalRequest { tool, .. } => {
                     eprintln!("\x1b[33m» approval needed: {tool}\x1b[0m")
                 }
+                AgentEvent::Usage { total, .. } => {
+                    eprintln!("\x1b[2m· tokens: {total}\x1b[0m")
+                }
+                AgentEvent::Tasks(_) => {}
                 AgentEvent::Error(e) => eprintln!("\x1b[31merror: {e}\x1b[0m"),
                 AgentEvent::ToolEnd { .. } => {}
             }

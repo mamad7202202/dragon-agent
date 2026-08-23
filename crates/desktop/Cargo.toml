@@ -8,10 +8,6 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 
-[lib]
-name = "dragon_gui_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
 [[bin]]
 name = "dragon-gui"
 path = "src/main.rs"

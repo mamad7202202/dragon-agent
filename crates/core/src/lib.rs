@@ -8,6 +8,7 @@ pub mod memory;
 pub mod presets;
 pub mod provider;
 pub mod session;
+pub mod update;
 
 pub const NAME: &str = "Dragon Agent";
 pub const AUTHOR: &str = "mamad720220";

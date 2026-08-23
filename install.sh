@@ -5,7 +5,7 @@
 set -eu
 
 REPO="mamad7202202/dragon-agent"
-TAG="latest"
+TAG=""
 
 os=$(uname -s)
 arch=$(uname -m)
@@ -23,7 +23,7 @@ case "$arch" in
 esac
 
 file="dragon-$arch-$os"
-url="https://github.com/$REPO/releases/download/$TAG/$file"
+url="https://github.com/$REPO/releases/latest/download/$file"
 dest="${DRAGON_INSTALL_DIR:-$HOME/.local/bin}"
 
 echo "dragon installer"

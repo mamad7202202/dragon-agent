@@ -27,6 +27,7 @@ enum TuiEvent {
     Paste(String),
     Agent(AgentEvent),
     TurnFinished(Result<String, String>),
+    Update(Option<String>),
 }
 
 /// Interactive provider/model setup. Navigable with arrow keys.
@@ -80,6 +81,8 @@ pub struct App {
     pub wizard: Option<Wizard>,
     /// Selected row inside the active wizard list.
     pub wizard_row: usize,
+    /// "v0.3.1 available" once the update checker comes back.
+    pub update_note: Option<String>,
     agent: Option<Arc<tokio::sync::Mutex<Agent>>>,
     session: Arc<Mutex<SessionLog>>,
     memory: Arc<Mutex<MemoryStore>>,
@@ -824,6 +827,7 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
         should_quit: false,
         wizard: None,
         wizard_row: 0,
+        update_note: None,
         agent: None,
         session: Arc::new(Mutex::new(SessionLog::create("(none)")?)),
         memory: memory.clone(),
@@ -894,6 +898,19 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
         });
     }
 
+    // update check (fire and forget) -----------------------------------------
+    {
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            let info = dragon_core::update::check(dragon_core::VERSION)
+                .await
+                .ok()
+                .flatten()
+                .map(|u| format!("{} available (you have v{})", u.latest, u.current));
+            let _ = tx.send(TuiEvent::Update(info));
+        });
+    }
+
     // main loop ----------------------------------------------------------------
     let result = loop {
         if app.busy {
@@ -917,6 +934,15 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
             }
             TuiEvent::TurnFinished(res) => {
                 app.finish_turn(res);
+                Ok(())
+            }
+            TuiEvent::Update(note) => {
+                app.update_note = note.clone();
+                if let Some(n) = note {
+                    app.say(Entry::System(format!(
+                        "update available: {n}\ndownload: https://github.com/mamad7202202/dragon-agent/releases"
+                    )));
+                }
                 Ok(())
             }
         };

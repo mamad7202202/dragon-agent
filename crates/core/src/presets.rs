@@ -1,5 +1,6 @@
 //! Built-in provider presets so users never have to memorize base URLs.
 
+#[derive(Clone, serde::Serialize)]
 pub struct Preset {
     pub name: &'static str,
     pub label: &'static str,

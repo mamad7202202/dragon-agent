@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 $repo = "mamad7202202/dragon-agent"
-$url = "https://github.com/$repo/releases/download/latest/dragon-x86_64-windows.exe"
+$url = "https://github.com/$repo/releases/latest/download/dragon-x86_64-windows.exe"
 $dir = Join-Path $env:LOCALAPPDATA "Programs\dragon"
 $exe = Join-Path $dir "dragon.exe"
 

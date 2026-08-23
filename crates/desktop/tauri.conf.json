@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Dragon Agent",
+  "identifier": "ir.dragon.agent",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Dragon Agent",
+        "width": 1120,
+        "height": 740,
+        "minWidth": 820,
+        "minHeight": 560,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

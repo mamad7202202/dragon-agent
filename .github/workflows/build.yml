@@ -41,6 +41,13 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install webview deps (desktop app on linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+               libayatana-appindicator3-dev librsvg2-dev
+
       - name: Test
         run: cargo test --workspace --target ${{ matrix.target }}
 
@@ -62,55 +69,9 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  # Rolling "latest" release refreshed on every push to main.
-  nightly:
-    name: Publish latest (rolling)
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-          path: dist
-
-      - name: Make unix binaries executable
-        run: |
-          chmod +x dist/dragon-x86_64-linux dist/dragon-aarch64-macos \
-                   dist/dragon-gui-x86_64-linux dist/dragon-gui-aarch64-macos
-
-      - name: Publish to "latest" release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: Latest build (auto)
-          prerelease: true
-          files: dist/*
-          overwrite_files: true
-          allow_updates: true
-          body: |
-            Rolling build of `main`. Raw executables - CLI and desktop app share one core.
-
-            | file | what | platform |
-            |---|---|---|
-            | `dragon-x86_64-windows.exe` | terminal agent | Windows x64 |
-            | `dragon-gui-x86_64-windows.exe` | desktop app | Windows x64 |
-            | `dragon-x86_64-linux` | terminal agent | Linux x64 |
-            | `dragon-gui-x86_64-linux` | desktop app | Linux x64 |
-            | `dragon-aarch64-macos` | terminal agent | macOS Apple Silicon |
-            | `dragon-gui-aarch64-macos` | desktop app | macOS Apple Silicon |
-
-            Install the CLI with one line:
-            ```sh
-            curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh
-            ```
-            ```powershell
-            irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex
-            ```
-
-  # Formal releases for version tags.
+  # Versioned releases, opencode-style: push a tag `vX.Y.Z` and every
+  # platform's raw executable lands on that release, plus a checksums file.
+  # The in-app updater reads tags from this stream.
   release:
     name: Release ${{ github.ref_name }}
     if: startsWith(github.ref, 'refs/tags/v')
@@ -125,9 +86,10 @@ jobs:
           path: dist
 
       - name: Make unix binaries executable
-        run: |
-          chmod +x dist/dragon-x86_64-linux dist/dragon-aarch64-macos \
-                   dist/dragon-gui-x86_64-linux dist/dragon-gui-aarch64-macos
+        run: chmod +x dist/dragon-*linux dist/dragon-*macos
+
+      - name: Generate checksums
+        run: cd dist && sha256sum * > checksums.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

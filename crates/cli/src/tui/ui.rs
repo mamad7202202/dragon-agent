@@ -156,37 +156,35 @@ fn draw_transcript(f: &mut Frame, app: &mut App, area: Rect) {
 
 /// The display-type wordmark, used only on the welcome screen.
 fn brand_lines() -> Vec<Line<'static>> {
-    let d = ["╔═╗", "║ ║", "╚═╝"];
-    let r = ["╦═╗", "╠═╝", "╩ ╩"];
-    let a = ["┌─┐", "├─┤", "┴ ┴"];
-    let g = ["┌─┐", "│ ┬", "┴─┘"];
-    let o = ["┌─┐", "│ │", "└─┘"];
-    let n = ["╔╦╗", "║║║", "╩ ╩"];
-    let e = ["┌─┐", "├─┤", "└─┘"];
-    let t = ["┌┬┐", " │ ", " ┴ "];
-    let word1 = [d, r, a, g, o, n];
-    let word2 = [a, g, e, n, t];
+    const ART: [&str; 12] = [
+        "██████╗ ██████╗  █████╗  ██████╗  ██████╗ ███╗   ██╗",
+        "██╔══██╗██╔══██╗██╔══██╗██╔════╝ ██╔═══██╗████╗  ██║",
+        "██║  ██║██████╔╝███████║██║  ███╗██║   ██║██╔██╗ ██║",
+        "██║  ██║██╔══██╗██╔══██║██║   ██║██║   ██║██║╚██╗██║",
+        "██████╔╝██║  ██║██║  ██║╚██████╔╝╚██████╔╝██║ ╚████║",
+        "╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝",
+        "",
+        " █████╗  ██████╗ ███████╗███╗   ██╗████████╗",
+        "██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝",
+        "███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║   ",
+        "██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║   ",
+        "██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║   ",
+    ];
+    // ember -> flame -> gold sweep down the block
     let palette = [EMBER, FLAME, GOLD];
-
-    let mut rows: [Vec<Span<'static>>; 3] = [vec![], vec![], vec![]];
-    for (wi, word) in [word1.to_vec(), word2.to_vec()].iter().enumerate() {
-        if wi > 0 {
-            for row in rows.iter_mut() {
-                row.push(Span::styled("  ", fg(ASH)));
+    ART.iter()
+        .enumerate()
+        .map(|(i, line)| {
+            if line.is_empty() {
+                return Line::from("");
             }
-        }
-        for (li, letter) in word.iter().enumerate() {
-            let color = palette[(li + wi * 2) % palette.len()];
-            for (row_i, part) in letter.iter().enumerate() {
-                rows[row_i].push(Span::styled(
-                    (*part).to_string(),
-                    fg(color).add_modifier(Modifier::BOLD),
-                ));
-                rows[row_i].push(Span::raw(" "));
-            }
-        }
-    }
-    rows.into_iter().map(Line::from).collect()
+            let color = palette[i % palette.len()];
+            Line::from(Span::styled(
+                line.to_string(),
+                fg(color).add_modifier(Modifier::BOLD),
+            ))
+        })
+        .collect()
 }
 
 fn brand_block() -> Vec<Line<'static>> {
@@ -211,17 +209,6 @@ fn welcome_lines(area: Rect) -> Vec<Line<'static>> {
         Line::from(Span::styled(
             "a fast AI agent with a long memory".to_string(),
             Style::new().fg(ASH).add_modifier(Modifier::ITALIC),
-        ))
-        .alignment(Alignment::Center),
-    );
-    v.push(
-        Line::from(Span::styled(
-            format!(
-                "by {} · {} · MIT",
-                dragon_core::AUTHOR,
-                dragon_core::TELEGRAM
-            ),
-            fg(SCALE),
         ))
         .alignment(Alignment::Center),
     );
@@ -329,11 +316,15 @@ fn draw_input(f: &mut Frame, app: &App, area: Rect) {
 
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let left = if app.wizard.is_some() {
-        " setup mode - answer in the box below"
+        " setup mode - answer in the box below".to_string()
     } else if app.busy {
-        " esc stop · pgup/pgdn scroll"
+        " esc stop · pgup/pgdn scroll".to_string()
     } else {
-        " enter send · ctrl+n new chat · esc quit"
+        " enter send · ctrl+n new chat · esc quit".to_string()
+    };
+    let left = match &app.update_note {
+        Some(note) => format!("{left}  ·  ⭡ {note}"),
+        None => left,
     };
     let right = if app.busy {
         format!(
@@ -345,7 +336,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         String::new()
     };
     f.render_widget(
-        Paragraph::new(Line::from(Span::styled(left.to_string(), fg(SCALE))))
+        Paragraph::new(Line::from(Span::styled(left, fg(SCALE))))
             .alignment(Alignment::Left),
         area,
     );

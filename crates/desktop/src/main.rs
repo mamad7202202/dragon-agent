@@ -8,7 +8,7 @@ use dragon_core::memory::MemoryStore;
 use dragon_core::{presets, provider};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 struct Shared {
     cfg: Mutex<Config>,
@@ -74,18 +74,11 @@ struct SettingsView {
     default_model: Option<String>,
 }
 
-fn state(s: &State<'_, Shared>) -> (&Mutex<Config>, &Mutex<Option<Arc<tokio::sync::Mutex<Agent>>>>, &Mutex<String>) {
-    (&s.cfg, &s.agent, &s.model_spec)
-}
-
-// ---------------------------------------------------------------- commands
-
 #[tauri::command]
 fn app_info(s: State<'_, Shared>) -> AppInfo {
-    let (_, _, model) = state(&s);
     AppInfo {
         version: dragon_core::VERSION.into(),
-        model_spec: model.lock().unwrap().clone(),
+        model_spec: s.model_spec.lock().unwrap().clone(),
         connected: s.agent.lock().unwrap().is_some(),
         config_path: Config::path().display().to_string(),
         data_dir: Config::data_dir().display().to_string(),
@@ -207,7 +200,7 @@ fn preset_names() -> Vec<String> {
 
 #[tauri::command]
 fn preset_detail(name: String) -> Option<presets::Preset> {
-    presets::find(&name).copied()
+    presets::find(&name).cloned()
 }
 
 #[tauri::command]

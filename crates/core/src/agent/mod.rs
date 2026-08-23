@@ -107,6 +107,11 @@ impl Agent {
         self.cancel.store(true, Ordering::Relaxed);
     }
 
+    pub fn set_model(&mut self, provider: Arc<dyn LlmProvider>, model: &str) {
+        self.provider = provider;
+        self.model = model.to_string();
+    }
+
     pub fn set_mode(&mut self, mode: Mode) {
         self.mode = mode;
         self.base_system = build_base_system(mode, self.ctx.allow_commands);

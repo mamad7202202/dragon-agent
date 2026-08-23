@@ -236,12 +236,6 @@ fn welcome_lines(area: Rect) -> Vec<Line<'static>> {
 
 fn draw_wizard(f: &mut Frame, app: &mut App, rows: &[String], area: Rect) {
     app.areas.wizard = area;
-    let area = {
-        // record for mouse hit-testing (interior-mutability-free pattern:
-        // App is passed as &mut from draw())
-        area
-    };
-    record_wizard_area(app, area);
     let block = Block::bordered()
         .border_set(border::ROUNDED)
         .border_style(fg(GOLD))

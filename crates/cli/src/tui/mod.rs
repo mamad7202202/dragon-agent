@@ -3,7 +3,7 @@
 pub mod ui;
 
 use dragon_core::agent::{Agent, AgentEvent, Mode};
-use dragon_core::config::Config;
+use dragon_core::config::{Config, ProviderCfg};
 use dragon_core::memory::MemoryStore;
 use dragon_core::provider;
 use dragon_core::session::{self, SessionLog};
@@ -945,7 +945,6 @@ impl App {
     fn config_setup_hint(&self) -> String {
         format!("no model configured.\n{}", crate::cli::setup_instructions())
     }
-}
 
     // tiny input-history helpers ------------------------------------------
 
@@ -1048,10 +1047,7 @@ impl App {
         self.config = cfg;
         self.say(Entry::System(format!("removed '{name}'.")));
     }
-
-    fn config_setup_hint(&self) -> String {
-        format!("no model configured.\n{}", crate::cli::setup_instructions())
-    }
+}
 
 // ------------------------------------------------------------------ wizard
 

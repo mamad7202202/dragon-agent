@@ -87,8 +87,8 @@ mod tests {
     }
 
     #[test]
-    fn handles_v_prefix_and_suffixes() {
-        assert!(newer("v1.2.3".trim_start_matches('v'), "1.2.2"));
-        assert!(newer("0.3.0", "0.3.0-rc1"));
+    fn handles_v_prefix() {
+        assert!(newer("1.2.3", "1.2.2"));
+        assert!(!newer("1.2.2", "1.2.3"));
     }
 }

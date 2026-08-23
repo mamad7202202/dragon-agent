@@ -4,135 +4,43 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dragon Agent — a fast AI agent with a long memory</title>
-<meta name="description" content="Open-source AI agent in Rust. Terminal + desktop app sharing one hybrid memory. Bring your own key - Google AI Studio, OpenRouter, OpenAI, Anthropic and more.">
+<meta name="description" content="Open-source AI agent in Rust. Terminal + desktop, one hybrid memory. Bring your own key: Google AI Studio, OpenRouter, OpenAI, Anthropic and more.">
+<link rel="stylesheet" href="style.css">
 <style>
-  :root{
-    --night:#121114; --panel:#1e1c21; --panel-2:#18171b;
-    --scale:#423e46; --ash:#7c7a81; --bone:#e5e2db;
-    --ember:#ff6347; --flame:#ff984a; --gold:#ffcd70;
-    --sky:#6caaf5; --violet:#ac8cfa; --jade:#69d296;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{
-    background:
-      radial-gradient(900px 420px at 75% -80px, rgba(255,99,71,.09), transparent 60%),
-      radial-gradient(700px 380px at 10% 10%, rgba(255,205,112,.05), transparent 55%),
-      var(--night);
-    color:var(--bone);
-    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
-    line-height:1.6;
-  }
-  code,.mono{font-family:"Cascadia Code",ui-monospace,Consolas,Menlo,monospace}
+.hero{text-align:center;padding:84px 0 64px}
+.hero h1{
+  font-size:clamp(46px,8vw,88px);font-weight:900;letter-spacing:.06em;line-height:1.04;
+  background:linear-gradient(94deg,var(--ember) 8%,var(--flame) 48%,var(--gold) 92%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero .tag{font-size:clamp(17px,2.5vw,22px);font-style:italic;color:var(--bone);margin-top:14px}
+.hero .sub{color:var(--ash);max-width:680px;margin:16px auto 32px;font-size:15.5px}
+.badges{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.badge{border:1px solid var(--line);border-radius:999px;padding:6px 15px;font-size:12.5px;color:var(--ash)}
+.badge b{color:var(--bone);font-weight:600}
 
-  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+.feat{transition:.18s}
+.feat:hover{transform:translateY(-3px);border-color:rgba(255,99,71,.35)}
+.feat .ic{font-size:20px;margin-bottom:10px;display:block}
+.feat p{color:var(--ash);font-size:13.8px;margin-top:7px}
+.f-ember{color:var(--ember)}.f-gold{color:var(--gold)}.f-jade{color:var(--jade)}
+.f-sky{color:var(--sky)}.f-violet{color:var(--violet)}.f-flame{color:var(--flame)}
 
-  /* nav */
-  nav{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
-  .brand{font-weight:800;letter-spacing:.16em;font-size:15px;text-decoration:none;color:var(--bone)}
-  .brand b{color:var(--ember)} .brand span{color:var(--gold)}
-  nav .links a{color:var(--ash);text-decoration:none;margin-left:22px;font-size:14px}
-  nav .links a:hover{color:var(--flame)}
-
-  /* hero */
-  .hero{text-align:center;padding:72px 0 58px}
-  .hero h1{
-    font-size:clamp(44px,8vw,84px);font-weight:900;letter-spacing:.06em;line-height:1.05;
-    background:linear-gradient(92deg,var(--ember) 10%,var(--flame) 50%,var(--gold) 90%);
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-  }
-  .hero .tag{font-size:clamp(17px,2.6vw,22px);color:var(--bone);margin-top:14px;font-style:italic}
-  .hero .sub{color:var(--ash);max-width:640px;margin:14px auto 30px;font-size:15.5px}
-  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-  .btn{
-    display:inline-block;padding:11px 22px;border-radius:9px;text-decoration:none;
-    font-size:14.5px;font-weight:600;border:1px solid var(--scale);color:var(--bone);
-    transition:.15s;
-  }
-  .btn:hover{border-color:var(--ember);transform:translateY(-1px)}
-  .btn.primary{background:var(--ember);color:#141216;border-color:var(--ember)}
-  .btn.primary:hover{background:var(--flame);border-color:var(--flame)}
-
-  /* sections */
-  section{padding:54px 0}
-  h2{font-size:26px;margin-bottom:6px;letter-spacing:.02em}
-  .kicker{color:var(--ember);font-size:12.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase}
-  .lead{color:var(--ash);margin-bottom:28px;max-width:640px}
-
-  /* install cards */
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
-  .card{
-    background:var(--panel);border:1px solid var(--scale);border-radius:12px;padding:24px;
-  }
-  .card h3{font-size:16px;display:flex;align-items:center;gap:9px}
-  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--ember)}
-  .dot.g{background:var(--gold)} .dot.j{background:var(--jade)}
-  .card p{color:var(--ash);font-size:13.5px;margin:8px 0 14px}
-  pre{
-    background:var(--panel-2);border:1px solid var(--scale);border-radius:8px;
-    padding:12px 14px;font-size:12.8px;overflow-x:auto;position:relative;
-    color:#d8d4cc;margin-bottom:10px;
-  }
-  .copy{
-    position:absolute;top:8px;right:8px;border:1px solid var(--scale);background:var(--night);
-    color:var(--ash);font-size:11px;border-radius:5px;padding:3px 8px;cursor:pointer;
-  }
-  .copy:hover{color:var(--gold);border-color:var(--gold)}
-  .oslabel{font-size:11.5px;color:var(--ash);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
-
-  /* demo chat */
-  .chatwin{
-    background:var(--panel);border:1px solid var(--scale);border-radius:14px;overflow:hidden;
-    max-width:720px;margin:0 auto;box-shadow:0 30px 70px rgba(0,0,0,.45);
-  }
-  .chathead{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:12px 18px;border-bottom:1px solid var(--scale);background:var(--panel-2)
-  }
-  .chathead .m{font-size:13px;color:var(--flame)}
-  .chathead .s{font-size:11.5px;color:var(--ash)}
-  #msgs{height:380px;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
-  .who{font-size:11.5px;font-weight:700;margin-bottom:4px}
-  .who.you{color:var(--sky)} .who.dragon{color:var(--ember)}
-  .bub{background:#18171b;border-radius:8px;padding:9px 13px;font-size:14px;white-space:pre-wrap;width:fit-content;max-width:88%}
-  .sys{color:var(--ash);font-size:12.5px}
-  .caret{display:inline-block;width:8px;height:14px;background:var(--gold);vertical-align:-2px;animation:blink 1s steps(1) infinite}
-  @keyframes blink{50%{opacity:0}}
-  .chatinput{display:flex;gap:10px;padding:13px 18px;border-top:1px solid var(--scale)}
-  #q{flex:1;background:var(--panel-2);border:1px solid var(--scale);border-radius:8px;color:var(--bone);
-     padding:10px 13px;font-size:14px;outline:none;font-family:inherit}
-  #q:focus{border-color:var(--ember)}
-  #send{background:var(--ember);border:none;color:#141216;font-weight:700;border-radius:8px;padding:0 22px;cursor:pointer;font-family:inherit}
-  #send:hover{background:var(--flame)}
-  .chips{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 16px}
-  .chip{border:1px solid var(--scale);background:none;color:var(--ash);border-radius:999px;
-        padding:5px 13px;font-size:12.5px;cursor:pointer;font-family:inherit}
-  .chip:hover{border-color:var(--gold);color:var(--gold)}
-
-  /* features */
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-  .feat{background:var(--panel);border:1px solid var(--scale);border-radius:12px;padding:20px}
-  .feat b{color:var(--bone)}
-  .feat .ic{font-size:19px;margin-bottom:8px;display:block}
-  .feat p{color:var(--ash);font-size:13.5px;margin-top:6px}
-  .f-ember{color:var(--ember)} .f-gold{color:var(--gold)} .f-jade{color:var(--jade)}
-  .f-sky{color:var(--sky)} .f-violet{color:var(--violet)} .f-flame{color:var(--flame)}
-
-  footer{border-top:1px solid var(--scale);margin-top:40px;padding:26px 0 40px;
-         display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;color:var(--ash);font-size:13.5px}
-  footer a{color:var(--flame);text-decoration:none}
-  footer a:hover{text-decoration:underline}
+.modes{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+.mode{flex:1;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:19px}
+.mode h4{font-size:15px;margin-bottom:6px}
+.mode p{color:var(--ash);font-size:13px}
 </style>
 </head>
 <body>
 
 <div class="wrap">
-<nav>
-  <a class="brand" href="#"><b>DRAGON</b> <span>AGENT</span></a>
+<nav class="top">
+  <a class="brand" href="index.html"><b>DRAGON</b> <span>AGENT</span></a>
   <div class="links">
-    <a href="#install">install</a>
-    <a href="#demo">demo</a>
-    <a href="#features">features</a>
+    <a href="index.html" class="active">home</a>
+    <a href="docs.html">docs</a>
+    <a href="stats.html">live stats</a>
     <a href="https://github.com/mamad7202202/dragon-agent">github ↗</a>
   </div>
 </nav>
@@ -141,180 +49,100 @@
   <h1>DRAGON AGENT</h1>
   <p class="tag">a fast AI agent with a long memory.</p>
   <p class="sub">
-    An open-source agent for your terminal <em>and</em> your desktop — written in Rust,
-    powered by <strong>your</strong> API keys, remembering what matters across sessions.
-    One core, two faces.
+    Open-source, written in Rust. A terminal CLI and a glassy desktop app sharing
+    <strong>one core</strong>: hybrid memory that survives sessions, plan / chat / agent modes,
+    permission-gated tools and any model you bring.
   </p>
-  <div class="cta">
+  <div class="cta" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
     <a class="btn primary" href="#install">get started</a>
-    <a class="btn" href="#demo">try the demo</a>
-    <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases">releases ↗</a>
+    <a class="btn" href="docs.html">read the docs</a>
+    <a class="btn" href="stats.html">live project stats</a>
+  </div>
+  <div class="badges">
+    <span class="badge"><b>v0.4.0</b> latest release</span>
+    <span class="badge">rust · zero telemetry</span>
+    <span class="badge">windows · linux · macOS</span>
+    <span class="badge">MIT license</span>
   </div>
 </header>
 
-<!-- ------------------------------------------------------- install -->
+<!-- install -->
 <section id="install">
   <div class="kicker">install</div>
-  <h2>Pick your face</h2>
-  <p class="lead">The CLI lives in your terminal; the desktop app gives you windows, tabs and clicks.
-     They share config, memory and sessions — switch whenever you like.</p>
+  <h2 class="sec">Two faces, one command away</h2>
+  <p class="lead">Pick the terminal, the desktop — or both. They share config, memory and sessions.</p>
 
-  <div class="cards">
+  <div class="grid g2">
     <div class="card">
-      <h3><span class="dot"></span>Terminal CLI <span class="mono" style="color:var(--ash);font-weight:400">· dragon</span></h3>
-      <p>Sets up <code>~/.local/bin</code> (or <code>%LOCALAPPDATA%</code>) and your PATH automatically.</p>
-      <div class="oslabel">linux / macOS</div>
-      <pre><button class="copy">copy</button><code id="c1">curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh</code></pre>
-      <div class="oslabel">windows powershell</div>
-      <pre><button class="copy">copy</button><code id="c2">irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex</code></pre>
-      <p style="margin-bottom:0">First launch opens an interactive setup wizard.</p>
+      <h3 style="font-size:16px">⌨ Terminal CLI <span class="mono" style="color:var(--ash);font-weight:400">· dragon</span></h3>
+      <p style="color:var(--ash);font-size:13.5px;margin:8px 0 12px">Streaming TUI with mouse support, session resume and permission prompts.</p>
+      <div style="font-size:11px;color:var(--ash);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">linux / macOS</div>
+      <pre><button class="copy">copy</button><code>c -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh</code></pre>
+      <div style="font-size:11px;color:var(--ash);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">windows powershell</div>
+      <pre><button class="copy">copy</button><code>irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex</code></pre>
     </div>
-
     <div class="card">
-      <h3><span class="dot g"></span>Desktop app <span class="mono" style="color:var(--ash);font-weight:400">· dragon-gui</span></h3>
-      <p>A clean native window: chat, memory browser, provider manager, settings.
-         Optional — grab it straight from the rolling release:</p>
-      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-windows-amd64.exe">windows x64</a>
-      &nbsp;
-      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-linux-amd64">linux x64</a>
-      &nbsp;
-      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-darwin-arm64">macOS arm64</a>
-      <p style="margin-top:14px;margin-bottom:0">All builds refresh automatically on every commit to main.</p>
+      <h3 style="font-size:16px">🖥 Desktop app <span class="mono" style="color:var(--ash);font-weight:400">· dragon-gui</span></h3>
+      <p style="color:var(--ash);font-size:13.5px;margin:8px 0 12px">Liquid-glass UI, light & dark themes, memory browser, provider manager.</p>
+      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-windows-amd64.exe">windows</a>&nbsp;
+      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-linux-amd64">linux</a>&nbsp;
+      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-darwin-arm64">macOS</a>
+      <p style="color:var(--ash);font-size:13px;margin-top:14px;margin-bottom:0">
+        Raw executables from the newest versioned release — no archives, no installer,
+        plus a <code class="inl">checksums.txt</code>. The apps check GitHub on launch and tell you when a new version is out.
+      </p>
     </div>
   </div>
 </section>
 
-<!-- --------------------------------------------------------- demo -->
-<section id="demo">
-  <div class="kicker">demo</div>
-  <h2>Talk to a paper dragon</h2>
-  <p class="lead">A tiny simulation of the real thing, running entirely in this page.
-     The real agent streams live tokens from your own model.</p>
-
-  <div class="chatwin">
-    <div class="chathead">
-      <span class="m">google/gemini-2.5-flash</span>
-      <span class="s">browser simulation</span>
-    </div>
-    <div id="msgs"></div>
-    <div class="chips" id="chips"></div>
-    <div class="chatinput">
-      <input id="q" placeholder="ask something..." autocomplete="off">
-      <button id="send">send</button>
-    </div>
+<!-- modes -->
+<section id="modes">
+  <div class="kicker">modes</div>
+  <h2 class="sec">Three ways to talk to it</h2>
+  <p class="lead">Switch per session — chat for thinking out loud, plan before touching files, agent when you mean it.</p>
+  <div class="modes">
+    <div class="mode"><h4 class="f-sky">💬 chat</h4><p>Pure conversation. No tools, no file access — fastest and cheapest.</p></div>
+    <div class="mode"><h4 class="f-gold">🗺 plan</h4><p>Read-only research (files, grep, web). Ends with a concrete numbered plan — nothing is modified.</p></div>
+    <div class="mode"><h4 class="f-ember">🐉 agent</h4><p>Full toolkit: read/write/edit/delete, shell, fetch. World-changing actions require your explicit approval.</p></div>
   </div>
 </section>
 
-<!-- ----------------------------------------------------- features -->
+<!-- features -->
 <section id="features">
   <div class="kicker">why dragon</div>
-  <h2>Built around memory</h2>
-  <p class="lead">Most agents forget you the second a session ends. Dragon doesn't.</p>
-
-  <div class="grid">
-    <div class="feat"><span class="ic f-ember">◈</span><b>Hybrid memory</b>
-      <p>Semantic fact store, procedural MEMORY.md and resumable session logs — recalled every turn by relevance × importance × recency.</p></div>
-    <div class="feat"><span class="ic f-gold">◇</span><b>Bring your own key</b>
-      <p>Preset one-liners for Google AI Studio, OpenRouter, OpenAI, Anthropic, Groq, DeepSeek, Ollama and LM Studio. Keys never leave your machine.</p></div>
-    <div class="feat"><span class="ic f-jade">◆</span><b>Native speed</b>
-      <p>Pure Rust, single static binary per platform. Millisecond cold starts, streaming everything.</p></div>
-    <div class="feat"><span class="ic f-sky">▣</span><b>Real tool use</b>
-      <p>Read and write files, grep with regex, walk directories, run shell commands behind an explicit opt-in gate.</p></div>
-    <div class="feat"><span class="ic f-violet">▤</span><b>Two faces, one core</b>
-      <p>The TUI and the desktop app share one core crate — same memory, same providers, same sessions.</p></div>
-    <div class="feat"><span class="ic f-flame">◉</span><b>Private by default</b>
-      <p>No accounts, no telemetry. Config and transcripts live in your user directory and nowhere else.</p></div>
+  <h2 class="sec">Memory is the product</h2>
+  <p class="lead">Most agents forget you the moment a tab closes. Dragon remembers — precisely, and cheaply.</p>
+  <div class="grid g3">
+    <div class="card feat"><span class="ic f-ember">◈</span><b>Session-scoped memory</b>
+      <p>Facts belong to the conversation they were learned in. Recall ranks them by relevance × importance × recency and injects only the top few — minimal tokens, maximal signal.</p></div>
+    <div class="card feat"><span class="ic f-gold">◇</span><b>Global knowledge</b>
+      <p>Durable preferences travel across sessions via <b>global</b> facts and a plain <b>MEMORY.md</b> of standing instructions.</p></div>
+    <div class="card feat"><span class="ic f-jade">◆</span><b>Permission gate</b>
+      <p>Writes, deletes and shell commands ask first. "Always allow" remembers your choice, and an independent explainer tells you what any action does before you decide.</p></div>
+    <div class="card feat"><span class="ic f-sky">▣</span><b>Sessions everywhere</b>
+      <p>Every conversation is a resumable JSONL transcript. Continue last week's task in the GUI or the CLI — history, mode and memories come back with it.</p></div>
+    <div class="card feat"><span class="ic f-violet">▤</span><b>BYOK presets</b>
+      <p>Google AI Studio, OpenRouter, OpenAI, Anthropic, Groq, DeepSeek, Ollama, LM Studio — one-liner setup, keys never leave your machine.</p></div>
+    <div class="card feat"><span class="ic f-flame">◉</span><b>Native speed</b>
+      <p>Pure Rust, hand-rolled SSE streaming, single static binary per platform. Millisecond cold starts, no Node, no Electron.</p></div>
   </div>
 </section>
 
 <footer>
   <span>created by <a href="https://t.me/mamad720220">@mamad720220</a></span>
-  <span><a href="https://github.com/mamad7202202/dragon-agent">source on github</a> · MIT license</span>
+  <span><a href="https://github.com/mamad7202202/dragon-agent">source</a> · <a href="docs.html">docs</a> · <a href="stats.html">stats</a> · MIT</span>
 </footer>
 </div>
 
 <script>
-/* ---------- copy buttons ---------- */
-document.querySelectorAll('.copy').forEach(b=>{
+document.querySelectorAll(".copy").forEach(b=>{
   b.onclick=()=>{
-    const code=document.getElementById(b.parentElement.querySelector('code').id);
+    const code=b.parentElement.querySelector("code");
     navigator.clipboard.writeText(code.textContent).then(()=>{
-      b.textContent='copied'; setTimeout(()=>b.textContent='copy',1200);
+      b.textContent="copied";setTimeout(()=>b.textContent="copy",1200);
     });
   };
 });
-
-/* ---------- demo brain ---------- */
-const msgs=document.getElementById('msgs');
-const q=document.getElementById('q');
-
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
-function addWho(cls,name){const w=document.createElement('div');w.className='who '+cls;w.textContent=name;msgs.appendChild(w)}
-function addSys(t){const d=document.createElement('div');d.className='sys';d.textContent=t;msgs.appendChild(d)}
-function scrollEnd(){msgs.scrollTop=msgs.scrollHeight}
-let typing=false;
-
-function stream(text){
-  typing=true;
-  addWho('dragon','dragon');
-  const b=document.createElement('div');b.className='bub';
-  const span=document.createElement('span');
-  const caret=document.createElement('span');caret.className='caret';
-  b.appendChild(span);b.appendChild(caret);msgs.appendChild(b);
-  let i=0;
-  const iv=setInterval(()=>{
-    if(text[i]==='\n'){span.appendChild(document.createElement('br'));}
-    else{span.textContent+=text[i]??'';}
-    i++;scrollEnd();
-    if(i>=text.length){clearInterval(iv);caret.remove();typing=false;addSys(' ');}
-  },14);
-}
-
-function answer(raw){
-  const c=raw.trim().toLowerCase();
-
-  if(c.includes('memory')||c.includes('remember')){
-    stream("Memory is my whole personality:\n• semantic facts — saved when I notice something durable\n• procedural rules — your standing instructions in MEMORY.md\n• episodic sessions — full JSONL transcripts you can resume\nEvery turn, relevant shards are scored by relevance × importance × recency and injected into my prompt.");
-  } else if(c.includes('model')||c.includes('provider')||c.includes('api')||c.includes('key')){
-    stream("You bring the key, I bring the speed. Preset setup is one command:\n\n  dragon setup --preset google --key AIza...\n  dragon setup --preset openrouter --key sk-or-...\n  dragon setup --preset ollama        (fully local)\n\nGoogle AI Studio even has a free tier. Your keys are stored only in your local config file.");
-  } else if(c.includes('gui')||c.includes('desktop')||c.includes('app')){
-    stream("There are two of me:\n• dragon — lives in your terminal\n• dragon-gui — a minimal desktop app with chat, a memory browser, provider manager and settings.\nThey share ONE core: same config, same memories, same sessions. Switch freely.");
-  } else if(c.includes('tool')||c.includes('file')||c.includes('shell')){
-    stream("I come with real tools: read_file, write_file, list_files, grep (regex over trees) and run_shell — the shell is gated behind an explicit allow_commands setting, so I never touch your machine uninvited.");
-  } else if(c.includes('rust')||c.includes('fast')||c.includes('speed')){
-    stream("Pure Rust, LTO-stripped release builds, hand-rolled SSE streaming. Cold start is a few milliseconds and there is no Node, no Electron, no runtime — just one binary per platform.");
-  } else if(c==='clear'){
-    msgs.innerHTML=''; return;
-  } else {
-    stream("This page is a paper dragon — canned answers only. The real one streams live tokens from YOUR model with YOUR key.\n\nAsk me about: memory · models · gui · tools · rust");
-  }
-}
-
-function ask(){
-  if(typing) return;
-  const v=q.value.trim(); if(!v)return;
-  q.value='';
-  addWho('you','you');
-  const b=document.createElement('div');b.className='bub';b.textContent=v;msgs.appendChild(b);
-  scrollEnd();
-  setTimeout(()=>answer(v),250);
-}
-document.getElementById('send').onclick=ask;
-q.addEventListener('keydown',e=>{if(e.key==='Enter')ask()});
-
-/* chips */
-const CHIPS=['how does your memory work?','which models can I plug in?','tell me about the desktop app','what tools do you have?'];
-CHIPS.forEach(t=>{
-  const b=document.createElement('button');b.className='chip';b.textContent=t;
-  b.onclick=()=>{if(!typing){q.value=t;ask();}};
-  document.getElementById('chips').appendChild(b);
-});
-
-/* boot */
-setTimeout(()=>{
-  addSys('simulation loaded - nothing leaves your browser.');
-  stream("Hello! I'm Dragon Agent — an open-source AI agent in Rust with a long memory.\nPick a question below or type your own.");
-},400);
 </script>
 </body>
 </html>

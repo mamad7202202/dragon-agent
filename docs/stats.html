@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Stats — Dragon Agent</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.hero-sm{text-align:center;padding:46px 0 26px}
+.hero-sm h1{font-size:clamp(30px,5vw,44px);font-weight:900;letter-spacing:.04em;
+  background:linear-gradient(90deg,var(--ember),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sm p{color:var(--ash);margin-top:8px;font-size:14.5px}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--jade);
+  margin-right:7px;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:20px;text-align:center;
+      transition:.18s}
+.stat:hover{transform:translateY(-2px);border-color:rgba(255,99,71,.35)}
+.stat .n{font-size:32px;font-weight:800;letter-spacing:-.02em;
+  background:linear-gradient(120deg,var(--ember),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .l{color:var(--ash);font-size:12px;text-transform:uppercase;letter-spacing:.16em;margin-top:4px}
+
+.panelbox{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-top:22px}
+.panelbox h3{font-size:16px;margin-bottom:4px}
+.panelbox .sub{color:var(--ash);font-size:12.5px;margin-bottom:16px}
+
+svg text{fill:var(--ash);font-family:"JetBrains Mono",monospace;font-size:10px}
+.dlrow{display:flex;align-items:center;gap:12px;margin-bottom:9px}
+.dlname{width:250px;font-family:"JetBrains Mono";font-size:12.3px;color:var(--bone);
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dlbarwrap{flex:1;height:9px;background:rgba(127,127,160,.13);border-radius:6px;overflow:hidden}
+.dlbar{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--ember),var(--gold));
+       width:0;transition:width 1s cubic-bezier(.2,.7,.3,1)}
+.dlval{width:74px;text-align:right;color:var(--ash);font-family:"JetBrains Mono";font-size:11.5px}
+
+.contribs{display:flex;flex-wrap:wrap;gap:14px}
+.contrib{text-align:center;width:86px}
+.contrib img{width:56px;height:56px;border-radius:50%;border:2px solid var(--line)}
+.contrib:hover img{border-color:var(--ember)}
+.contrib .cn{font-size:11px;color:var(--ash);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contrib .cc{font-size:11px;color:var(--flame)}
+
+.langrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.langname{width:110px;font-size:12.5px}
+.langpct{color:var(--ash);font-family:"JetBrains Mono";font-size:11.5px;width:48px;text-align:right}
+
+.err{color:var(--blood);text-align:center;padding:30px}
+.refresh-note{text-align:right;color:var(--scale);font-size:11.5px;margin-top:6px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav class="top">
+  <a class="brand" href="index.html"><b>DRAGON</b> <span>AGENT</span></a>
+  <div class="links">
+    <a href="index.html">home</a>
+    <a href="docs.html">docs</a>
+    <a href="stats.html" class="active">live stats</a>
+    <a href="https://github.com/mamad7202202/dragon-agent">github ↗</a>
+  </div>
+</nav>
+
+<header class="hero-sm">
+  <h1><span class="live-dot"></span>LIVE PROJECT STATS</h1>
+  <p>fetched straight from the GitHub API in your browser — nothing cached, nothing faked</p>
+</header>
+
+<div id="content">
+  <div class="statgrid">
+    <div class="stat"><div class="n" id="s-stars">–</div><div class="l">stars</div></div>
+    <div class="stat"><div class="n" id="s-forks">–</div><div class="l">forks</div></div>
+    <div class="stat"><div class="n" id="s-watch">–</div><div class="l">watchers</div></div>
+    <div class="stat"><div class="n" id="s-issues">–</div><div class="l">open issues</div></div>
+    <div class="stat"><div class="n" id="s-commits">–</div><div class="l">commits (year)</div></div>
+    <div class="stat"><div class="n" id="s-dls">–</div><div class="l">total downloads</div></div>
+  </div>
+
+  <div class="panelbox">
+    <h3>Commit activity — last 52 weeks</h3>
+    <div class="sub">real commit counts per week from the repository</div>
+    <div id="chart"></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:22px">
+    <div class="panelbox" style="margin-top:0">
+      <h3>Latest release downloads</h3>
+      <div class="sub" id="rel-name">loading…</div>
+      <div id="downloads"><span style="color:var(--ash)">…</span></div>
+    </div>
+    <div class="panelbox" style="margin-top:0">
+      <h3>Languages</h3>
+      <div class="sub">bytes of code by language</div>
+      <div id="langs"><span style="color:var(--ash)">…</span></div>
+    </div>
+  </div>
+
+  <div class="panelbox">
+    <h3>Top contributors</h3>
+    <div class="sub">by commit count</div>
+    <div class="contribs" id="contribs"><span style="color:var(--ash)">…</span></div>
+  </div>
+
+  <div class="refresh-note">auto-refreshes every 60s · GitHub API rate limit is 60 req/hour per visitor</div>
+</div>
+
+<footer>
+  <span>created by <a href="https://t.me/mamad720220">@mamad720220</a></span>
+  <span><a href="index.html">home</a> · <a href="docs.html">docs</a> · MIT</span>
+</footer>
+</div>
+
+<script>
+const API="https://api.github.com/repos/mamad7202202/dragon-agent";
+const j=url=>fetch(url).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+
+function fmt(n){return n>=1000?(n/1000).toFixed(n>=10000?0:1)+"k":String(n)}
+
+/* sparkline-ish bar chart, hand-rolled SVG */
+function chart(data){
+  const W=Math.min(1000,(document.getElementById("chart").clientWidth||900)-4),H=180,P=24;
+  const max=Math.max(...data.map(d=>d.total),1);
+  const bw=(W-P*2)/data.length;
+  let bars="";
+  data.forEach((d,i)=>{
+    const h=(d.total/max)*(H-P*2-14);
+    const x=P+i*bw+1;
+    const y=H-P-h;
+    const hot=d.total===max;
+    bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(bw-2,2).toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" rx="2"
+            fill="${hot?'url(#g1)':'#ff6347'}" opacity="${hot?1:0.28+0.5*(d.total/max)}"><title>week of ${new Date(d.week*1000).toISOString().slice(0,10)}: ${d.total} commits</title></rect>`;
+  });
+  document.getElementById("chart").innerHTML=
+   `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff6347"/><stop offset="1" stop-color="#ffcd70"/></linearGradient></defs>
+      <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="#3a3544"/>
+      <line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="#3a3544"/>
+      ${bars}
+      <text x="${P}" y="${P-8}">${max} commits/week peak</text>
+      <text x="${W-P}" y="${H-P+16}" text-anchor="end">${new Date(data[data.length-1].week*1000).toISOString().slice(0,10)}</text>
+      <text x="${P}" y="${H-P+16}">${new Date(data[0].week*1000).toISOString().slice(0,10)}</text>
+    </svg>`;
+}
+
+async function loadAll(){
+  try{
+    // repo meta
+    const repo=await j(API);
+    set("s-stars",fmt(repo.stargazers_count));
+    set("s-forks",fmt(repo.forks_count));
+    set("s-watch",fmt(repo.subscribers_count||repo.watchers_count));
+    set("s-issues",fmt(repo.open_issues_count));
+
+    // commits this year + chart (real weekly data)
+    try{
+      const act=await j(API+"/stats/commit_activity");
+      if(Array.isArray(act)&&act.length){
+        chart(act.slice(-52));
+        set("s-commits",fmt(act.reduce((a,w)=>a+w.total,0)));
+      }else throw 0;
+    }catch(e){ /* stats endpoint may return 202 while computing */
+      document.getElementById("chart").innerHTML="<div class='err'>GitHub is computing statistics - reload in a moment.</div>";
+    }
+
+    // latest release + downloads
+    try{
+      const rel=await j(API+"/releases/latest");
+      document.getElementById("rel-name").textContent=rel.tag_name+" · "+new Date(rel.published_at).toISOString().slice(0,10);
+      const assets=[...rel.assets].sort((a,b)=>b.download_count-a.download_count);
+      const maxd=Math.max(...assets.map(a=>a.download_count),1);
+      const box=document.getElementById("downloads");box.innerHTML="";
+      let total=0;
+      assets.forEach(a=>{
+        total+=a.download_count;
+        const row=document.createElement("div");row.className="dlrow";
+        row.innerHTML=`<span class="dlname" title="${a.name}">${a.name}</span>
+                       <div class="dlbarwrap"><div class="dlbar"></div></div>
+                       <span class="dlval">${fmt(a.download_count)}</span>`;
+        box.appendChild(row);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>
+          row.querySelector(".dlbar").style.width=Math.max((a.download_count/maxd)*100,2)+"%"));
+      });
+      set("s-dls",fmt(total));
+    }catch(e){
+      document.getElementById("downloads").innerHTML="<div class='err'>no release published yet.</div>";
+    }
+
+    // languages
+    try{
+      const langs=await j(API+"/languages");
+      const entries=Object.entries(langs).sort((a,b)=>b[1]-a[1]);
+      const sum=entries.reduce((a,[,v])=>a+v,0)||1;
+      const box=document.getElementById("langs");box.innerHTML="";
+      const colors=["#ff6347","#ff984a","#ffcd70","#69d296","#6caaf5","#ac8cfa"];
+      entries.forEach(([name,v],i)=>{
+        const pct=(v/sum*100).toFixed(1);
+        const row=document.createElement("div");row.className="langrow";
+        row.innerHTML=`<span class="langname"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${colors[i%6]};margin-right:8px"></span>${name}</span>
+                       <div class="dlbarwrap"><div class="dlbar" style="background:${colors[i%6]}"></div></div>
+                       <span class="langpct">${pct}%</span>`;
+        box.appendChild(row);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>row.querySelector(".dlbar").style.width=pct+"%"));
+      });
+    }catch(e){}
+
+    // contributors
+    try{
+      const cs=(await j(API+"/contributors?per_page=8")).slice(0,8);
+      const box=document.getElementById("contribs");box.innerHTML="";
+      cs.forEach(c=>{
+        const d=document.createElement("a");d.className="contrib";
+        d.href=c.html_url;d.target="_blank";d.rel="noopener";
+        d.innerHTML=`<img src="${c.avatar_url}" alt=""><div class="cn">${c.login}</div><div class="cc">${c.contributions} commits</div>`;
+        box.appendChild(d);
+      });
+    }catch(e){}
+  }catch(err){
+    document.getElementById("content").innerHTML=
+      `<div class="err">couldn't reach the GitHub API (${err.message}) — rate limits reset hourly; try again later.</div>`;
+  }
+}
+function set(id,v){document.getElementById(id).textContent=v}
+
+loadAll();
+setInterval(loadAll,60000);
+</script>
+</body>
+</html>

@@ -11,6 +11,7 @@
 //!                        that can be resumed verbatim.
 
 pub mod compact;
+pub mod graph;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

@@ -54,6 +54,7 @@ impl LlmProvider for Anthropic {
         system: Option<&str>,
         messages: &[Message],
         tools: &[ToolDef],
+        thinking: crate::config::Thinking,
         tx: UnboundedSender<StreamEvent>,
     ) -> Result<()> {
         let mut wire: Vec<Value> = Vec::new();
@@ -102,12 +103,21 @@ impl LlmProvider for Anthropic {
             }
         }
 
+        let budget = match thinking {
+            crate::config::Thinking::Low => Some(1024),
+            crate::config::Thinking::Medium => Some(4096),
+            crate::config::Thinking::High => Some(8192),
+            _ => None,
+        };
         let mut body = json!({
             "model": model,
-            "max_tokens": 8192,
+            "max_tokens": 4096 + budget.unwrap_or(0) + 512,
             "stream": true,
             "messages": wire,
         });
+        if let Some(b) = budget {
+            body["thinking"] = json!({ "type": "enabled", "budget_tokens": b });
+        }
         if let Some(s) = system {
             if !s.is_empty() {
                 body["system"] = json!(s);
@@ -186,9 +196,19 @@ impl LlmProvider for Anthropic {
                         _ => {}
                     }
                 }
+                Some("message_start") => {
+                    if let Some(u) = v.pointer("/message/usage") {
+                        let p = u.get("input_tokens").and_then(|x| x.as_u64()).unwrap_or(0);
+                        let _ = tx2.send(StreamEvent::Usage { prompt: p, completion: 0, total: p });
+                    }
+                }
                 Some("message_delta") => {
                     if v["delta"]["stop_reason"] == "tool_use" {
                         wants_tools = true;
+                    }
+                    if let Some(u) = v.get("usage") {
+                        let c = u.get("output_tokens").and_then(|x| x.as_u64()).unwrap_or(0);
+                        let _ = tx2.send(StreamEvent::Usage { prompt: 0, completion: c, total: c });
                     }
                 }
                 _ => {}

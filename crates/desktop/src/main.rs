@@ -20,6 +20,7 @@ struct Shared {
     model_spec: Mutex<String>,
     mode: Mutex<Mode>,
     session_id: Mutex<String>,
+    graph: Arc<Mutex<dragon_core::memory::graph::GraphStore>>,
     rt: tokio::runtime::Runtime,
 }
 
@@ -41,6 +42,12 @@ impl Shared {
         agent.set_session(if sid.is_empty() { None } else { Some(&sid) });
         agent.set_mode(mode);
         agent.set_auto_approve(cfg.settings.auto_approve.clone());
+        agent.set_thinking(cfg.settings.thinking_level());
+        agent.set_engine(if cfg.settings.graph_memory() {
+            Some(self.graph.clone())
+        } else {
+            None
+        });
         *self.agent.lock().unwrap() = Some(Arc::new(tokio::sync::Mutex::new(agent)));
         *self.model_spec.lock().unwrap() = spec;
         Ok(())
@@ -206,6 +213,12 @@ fn send(text: String, s: State<'_, Shared>, app: AppHandle) -> Result<(), String
                     serde_json::json!({"kind":"approval","id":id,"tool":tool,"detail":detail})
                 }
                 AgentEvent::Compacted => serde_json::json!({"kind":"compacted"}),
+                AgentEvent::Usage { prompt, completion, total } => {
+                    serde_json::json!({"kind":"usage","prompt":prompt,"completion":completion,"total":total})
+                }
+                AgentEvent::Tasks(board) => {
+                    serde_json::json!({"kind":"tasks","board":board})
+                }
                 AgentEvent::Stopped => serde_json::json!({"kind":"stopped"}),
                 AgentEvent::Error(e) => serde_json::json!({"kind":"error","text":e}),
                 AgentEvent::ToolEnd { .. } => continue,
@@ -233,6 +246,12 @@ fn send(text: String, s: State<'_, Shared>, app: AppHandle) -> Result<(), String
     Ok(())
 }
 
+#[tauri::command]
+fn open_download() -> Result<String, String> {
+    let url = dragon_core::update::latest_download_url(true);
+    dragon_core::update::open_browser(&url).map_err(|e| format!("{e:#}"))?;
+    Ok(url)
+}
 #[tauri::command]
 fn stop(s: State<'_, Shared>) {
     if let Some(ag) = &*s.agent.lock().unwrap() {
@@ -400,6 +419,8 @@ fn get_settings(s: State<'_, Shared>) -> serde_json::Value {
         "default_model": cfg.default_model,
         "theme": cfg.settings.theme,
         "auto_approve": cfg.settings.auto_approve,
+        "thinking": cfg.settings.thinking,
+        "memory_engine": cfg.settings.memory_engine,
     })
 }
 
@@ -408,6 +429,8 @@ fn set_settings(
     allow_commands: bool,
     compaction_messages: usize,
     theme: Option<String>,
+    thinking: Option<String>,
+    memory_engine: Option<String>,
     s: State<'_, Shared>,
 ) -> Result<(), String> {
     {
@@ -416,6 +439,16 @@ fn set_settings(
         cfg.settings.compaction_messages = compaction_messages.clamp(12, 400);
         if let Some(t) = theme {
             cfg.settings.theme = t;
+        }
+        if let Some(t) = thinking {
+            if matches!(t.as_str(), "off" | "low" | "medium" | "high") {
+                cfg.settings.thinking = t;
+            }
+        }
+        if let Some(e) = memory_engine {
+            if e == "graph" || e == "hybrid" {
+                cfg.settings.memory_engine = e;
+            }
         }
         cfg.save().map_err(|e| format!("{e:#}"))?;
     }
@@ -519,6 +552,7 @@ fn main() {
     let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
     let cfg = Config::load().unwrap_or_default();
     let memory = Arc::new(Mutex::new(MemoryStore::open().unwrap()));
+    let graph = Arc::new(Mutex::new(dragon_core::memory::graph::GraphStore::open().unwrap()));
     let mode = Mode::parse(&cfg.settings.default_mode).unwrap_or(Mode::Agent);
     let shared = Shared {
         cfg: Mutex::new(cfg),
@@ -527,6 +561,7 @@ fn main() {
         model_spec: Mutex::new("(none)".into()),
         mode: Mutex::new(mode),
         session_id: Mutex::new(String::new()),
+        graph,
         rt,
     };
 
@@ -544,6 +579,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             app_info,
             check_update,
+            open_download,
             explain_action,
             send,
             stop,

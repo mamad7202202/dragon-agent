@@ -73,6 +73,57 @@ fn newer(candidate: &str, current: &str) -> bool {
     false
 }
 
+/// Asset name matching THIS machine, as published by the release workflow.
+pub fn asset_name_for_current(gui: bool) -> String {
+    let os = match std::env::consts::OS {
+        "windows" => "windows",
+        "macos" => "darwin",
+        _ => "linux",
+    };
+    let arch = match std::env::consts::ARCH {
+        "x86_64" => "amd64",
+        "aarch64" => "arm64",
+        other => other,
+    };
+    let ext = if os == "windows" { ".exe" } else { "" };
+    let base = if gui { "dragon-gui-" } else { "dragon-" };
+    format!("{base}{os}-{arch}{ext}")
+}
+
+/// Direct download link for the newest release asset for this machine.
+pub fn latest_download_url(gui: bool) -> String {
+    format!(
+        "https://github.com/mamad7202202/dragon-agent/releases/latest/download/{}",
+        asset_name_for_current(gui)
+    )
+}
+
+/// Open a URL in the default browser, blocking briefly.
+pub fn open_browser(url: &str) -> Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", url])
+            .spawn()
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,5 +141,12 @@ mod tests {
     fn handles_v_prefix() {
         assert!(newer("1.2.3", "1.2.2"));
         assert!(!newer("1.2.2", "1.2.3"));
+    }
+
+    #[test]
+    fn asset_naming_matches_workflow() {
+        let name = asset_name_for_current(false);
+        assert!(name.starts_with("dragon-"));
+        assert!(name.contains("amd64") || name.contains("arm64"));
     }
 }

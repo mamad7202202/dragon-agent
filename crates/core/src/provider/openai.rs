@@ -32,6 +32,7 @@ impl LlmProvider for OpenAiCompat {
         system: Option<&str>,
         messages: &[Message],
         tools: &[ToolDef],
+        thinking: crate::config::Thinking,
         tx: UnboundedSender<StreamEvent>,
     ) -> Result<()> {
         let mut wire: Vec<Value> = Vec::new();
@@ -84,21 +85,51 @@ impl LlmProvider for OpenAiCompat {
                 }))
                 .collect::<Vec<_>>());
         }
+        // best-effort extras - dropped automatically if the provider rejects them
+        body["stream_options"] = json!({ "include_usage": true });
+        let effort = match thinking {
+            crate::config::Thinking::Low => Some("low"),
+            crate::config::Thinking::Medium => Some("medium"),
+            crate::config::Thinking::High => Some("high"),
+            _ => None,
+        };
+        if let Some(eff) = effort {
+            body["reasoning_effort"] = json!(eff);
+        }
 
         let url = format!("{}/chat/completions", self.cfg.base_url.trim_end_matches('/'));
-        let resp = self
-            .http
-            .post(&url)
-            .bearer_auth(&self.cfg.api_key)
-            .json(&body)
-            .send()
-            .await?;
-
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
-            bail!("{} returned {status}: {}", self.cfg.name, truncate(&text, 500));
-        }
+        let mut no_usage = false;
+        let mut no_think = effort.is_none();
+        let resp = loop {
+            let mut b = body.clone();
+            if no_usage {
+                b.as_object_mut().unwrap().remove("stream_options");
+            }
+            if no_think {
+                b.as_object_mut().unwrap().remove("reasoning_effort");
+            }
+            let r = self
+                .http
+                .post(&url)
+                .bearer_auth(&self.cfg.api_key)
+                .json(&b)
+                .send()
+                .await?;
+            if r.status().is_client_error() {
+                let txt = r.text().await.unwrap_or_default();
+                let lower = txt.to_lowercase();
+                if !no_think && lower.contains("reasoning") {
+                    no_think = true;
+                    continue;
+                }
+                if !no_usage && (lower.contains("stream_options") || lower.contains("usage")) {
+                    no_usage = true;
+                    continue;
+                }
+                bail!("{} returned {}: {}", self.cfg.name, r.status(), truncate(&txt, 500));
+            }
+            break r;
+        };
 
         // index -> (id, name, arguments-so-far)
         let mut acc: BTreeMap<u64, (String, String, String)> = BTreeMap::new();

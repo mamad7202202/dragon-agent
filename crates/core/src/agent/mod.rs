@@ -55,6 +55,10 @@ pub enum AgentEvent {
     Stopped,
     /// A gated tool wants to run. Answer via `Agent::respond(id, allowed)`.
     ApprovalRequest { id: u64, tool: String, detail: String },
+    /// Live token accounting for the current turn.
+    Usage { prompt: u64, completion: u64, total: u64 },
+    /// The task board changed (task_write tool).
+    Tasks(serde_json::Value),
     Error(String),
 }
 
@@ -70,6 +74,7 @@ pub struct Agent {
     pub session_id: Option<String>,
     /// Patterns like "write_file" or "run_shell:npm" that skip the prompt.
     pub auto_approve: Vec<String>,
+    pub thinking: crate::config::Thinking,
     cancel: Arc<std::sync::atomic::AtomicBool>,
     approvals: Arc<Mutex<HashMap<u64, tokio::sync::oneshot::Sender<bool>>>>,
     next_id: AtomicU64,
@@ -96,6 +101,7 @@ impl Agent {
             mode: Mode::default(),
             session_id: None,
             auto_approve: Vec::new(),
+            thinking: crate::config::Thinking::Off,
             cancel: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             approvals: Arc::new(Mutex::new(HashMap::new())),
             next_id: AtomicU64::new(1),
@@ -105,6 +111,15 @@ impl Agent {
     /// Request cancellation of the in-flight turn (also cancels pending asks).
     pub fn stop(&self) {
         self.cancel.store(true, Ordering::Relaxed);
+    }
+
+    /// Attach the memory-graph engine (Some = graph mode active).
+    pub fn set_engine(&mut self, graph: Option<Arc<Mutex<crate::memory::graph::GraphStore>>>) {
+        self.ctx.graph = graph;
+    }
+
+    pub fn set_thinking(&mut self, t: crate::config::Thinking) {
+        self.thinking = t;
     }
 
     pub fn set_model(&mut self, provider: Arc<dyn LlmProvider>, model: &str) {
@@ -144,7 +159,16 @@ impl Agent {
             sys.push_str("\n\n");
             sys.push_str(&proc_mem);
         }
-        if let Ok(mut m) = self.ctx.memory.lock() {
+        if let Some(g) = &self.ctx.graph {
+            // info-graph engine: whole compact outline instead of fuzzy recall
+            if let Ok(g) = g.lock() {
+                if let Some(block) = g.render(self.session_id.as_deref(), 220) {
+                    sys.push_str("\n\n");
+                    sys.push_str(&block);
+                    sys.push_str("\nKeep the graph accurate: call graph_set_section after every significant milestone or change of direction.");
+                }
+            }
+        } else if let Ok(mut m) = self.ctx.memory.lock() {
             if let Some(block) = m.recall_block_scoped(user_input, 6, self.session_id.as_deref()) {
                 sys.push_str("\n\n");
                 sys.push_str(&block);
@@ -174,13 +198,13 @@ impl Agent {
             let model = self.model.clone();
             let msgs = self.history.clone();
             let tdefs = if self.tools_enabled && self.mode != Mode::Chat {
-                tools::defs(&self.mode, self.ctx.allow_commands)
+                tools::defs(&self.mode, self.ctx.allow_commands, self.ctx.graph.is_some())
             } else {
                 vec![]
             };
 
             let handle = tokio::spawn(async move {
-                provider.stream_chat(&model, Some(&system), &msgs, &tdefs, etx).await
+                provider.stream_chat(&model, Some(&system), &msgs, &tdefs, self.thinking, etx).await
             });
 
             let mut text = String::new();
@@ -197,6 +221,9 @@ impl Agent {
                         let _ = tx.send(AgentEvent::Delta(d));
                     }
                     StreamEvent::ToolCalls(c) => calls = Some(c),
+                    StreamEvent::Usage { prompt, completion, total } => {
+                        let _ = tx.send(AgentEvent::Usage { prompt, completion, total });
+                    }
                     StreamEvent::Done => {}
                 }
             }
@@ -253,6 +280,13 @@ impl Agent {
                         "USER DENIED this action.".to_string()
                     };
 
+                    if c.name == "task_write" {
+                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&c.arguments) {
+                            if let Some(list) = v.get("tasks") {
+                                let _ = tx.send(AgentEvent::Tasks(list.clone()));
+                            }
+                        }
+                    }
                     let _ = tx.send(AgentEvent::ToolEnd { name: c.name });
                     self.history.push(Message {
                         role: crate::provider::Role::Tool,
@@ -292,6 +326,7 @@ impl tools::ToolCtx {
             memory: self.memory.clone(),
             allow_commands: self.allow_commands,
             session_id: self.session_id.clone(),
+            graph: self.ctx.graph.clone(),
         }
     }
 }

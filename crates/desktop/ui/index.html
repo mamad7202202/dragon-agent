@@ -347,6 +347,8 @@
       </div>
       <span id="conn" class="off"></span>
       <div class="grow"></div>
+      <button class="chip" id="usage-chip" title="tokens this turn" style="cursor:default;color:var(--jade)">↯ 0 tok</button>
+      <button class="chip" id="activity-chip" title="Activity board">☑ activity</button>
       <button class="chip" id="theme-chip" title="Theme (Ctrl+D)">◐</button>
       <button class="chip" id="help-chip" title="Shortcuts (?)">?</button>
       <button id="update-banner"></button>
@@ -413,6 +415,21 @@
             <button class="ghost" id="set-model-apply">apply</button>
           </div>
           <div class="setrow">
+            <div class="lbl">Deep thinking<small>extra reasoning for models that support it</small></div>
+            <select id="set-thinking" style="width:150px">
+              <option value="off">off</option>
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+          </div>
+
+          <div class="setrow">
+            <div class="lbl">Memory graph<small>info-graph memory: terse sections the model maintains itself — ultra token-cheap</small></div>
+            <label class="switch"><input type="checkbox" id="set-graph"><span class="sl"></span></label>
+          </div>
+
+          <div class="setrow">
             <div class="lbl">Allow shell commands<small>run_shell can execute commands here (still asks per action)</small></div>
             <label class="switch"><input type="checkbox" id="set-shell"><span class="sl"></span></label>
           </div>
@@ -466,7 +483,29 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="activity-drawer">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <b style="font-size:15px">Activity</b>
+    <button class="ghost" onclick="document.getElementById('activity-drawer').classList.remove('show')">close</button>
+  </div>
+  <h4 style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:10px">task board</h4>
+  <div id="task-board" style="min-height:40px"><span style="color:var(--ash);font-size:13px">the agent builds its plan here via task_write…</span></div>
+  <h4 style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet);margin:18px 0 10px">timeline</h4>
+  <div id="tool-timeline"><span style="color:var(--ash);font-size:13px">actions will appear here.</span></div>
+</div>
+<style>
+#activity-drawer{position:fixed;top:0;right:-380px;width:360px;height:100vh;z-index:80;
+  background:var(--panel-solid);border-left:1px solid var(--line2);padding:20px;
+  transition:right .25s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+#activity-drawer.show{right:0;box-shadow:-24px 0 60px rgba(0,0,0,.35)}
+.task{display:flex;gap:9px;align-items:flex-start;padding:7px 9px;border-radius:9px;margin-bottom:5px;font-size:13.2px}
+.task .bx{width:16px;height:16px;border-radius:5px;border:1.6px solid var(--scale);flex-shrink:0;display:grid;place-items:center;font-size:11px;margin-top:1px}
+.task.done{color:var(--ash);text-decoration:line-through}
+.task.done .bx{background:linear-gradient(135deg,var(--jade),#3fae74);border-color:transparent;color:#10241a;font-weight:900}
+.task.done .bx::after{content:"✓"}
+.tl{display:flex;gap:9px;align-items:center;padding:6px 4px;font-family:"JetBrains Mono",monospace;font-size:11.8px;color:var(--ash)}
+.tl b{color:var(--violet)}
+</style><div class="toast" id="toast"></div>
 
 <script>
 const { invoke } = window.__TAURI__.core;
@@ -529,7 +568,7 @@ async function boot(){
     const upd=await invoke("check_update");
     if(upd){const b=$("#update-banner");
       b.textContent="⭡ "+upd.latest+" available (you have v"+upd.current+") — download";
-      b.style.display="block";b.onclick=()=>window.open(upd.url,"_blank");}
+      b.style.display="block";b.onclick=async()=>{const url=await invoke("open_download");toast("opening "+url);};}
   }catch(e){}
 }
 
@@ -791,14 +830,48 @@ async function loadSettings(){
   if(st.default_model)sel.value=st.default_model;
   $("#set-shell").checked=!!st.allow_commands;
   $("#set-compaction").value=st.compaction_messages;
+  $("#set-thinking").value=st.thinking||"off";
+  $("#set-graph").checked=st.memory_engine==="graph";
 }
 $("#set-model-apply").onclick=async()=>{
   await invoke("set_default",{spec:$("#set-model").value});toast("default applied");refreshHeader();};
 $("#set-save").onclick=async()=>{
   await invoke("set_settings",{allowCommands:$("#set-shell").checked,
                                compactionMessages:parseInt($("#set-compaction").value)||36,
-                               theme:null});
+                               theme:null,
+                               thinking:$("#set-thinking").value,
+                               memoryEngine:$("#set-graph").checked?"graph":"hybrid"});
   toast("settings saved");};
+
+/* ---------- usage chip ---------- */
+function fmtTok(n){return n>=1000?(n/1000).toFixed(1)+"k":String(n)}
+let tok={p:0,c:0,t:0};
+function renderUsage(){
+  const u=$("#usage-chip");
+  if(tok.t>0)u.textContent="↯ "+fmtTok(tok.t)+" tok";
+}
+/* ---------- activity drawer ---------- */
+$("#activity-chip").onclick=()=>$("#activity-drawer").classList.toggle("show");
+function renderTasks(list){
+  const box=$("#task-board");box.innerHTML="";
+  if(!list||!list.length){box.innerHTML='<span style="color:var(--ash);font-size:13px">(empty)</span>';return;}
+  list.forEach(t=>{
+    const done=t.status==="done";
+    const d=document.createElement("div");d.className="task"+(done?" done":"");
+    d.innerHTML='<span class="bx"></span><span></span>';
+    d.querySelector("span:last-child").textContent=t.text||"?";
+    box.appendChild(d);
+  });
+}
+function pushTimeline(name,detail){
+  const tl=$("#tool-timeline");
+  if(tl.querySelector("span"))tl.innerHTML="";
+  const d=document.createElement("div");d.className="tl";
+  d.innerHTML="<b>»</b><span></span>";
+  d.lastChild.textContent=name+" "+String(detail||"").slice(0,60);
+  tl.prepend(d);
+  while(tl.children.length>40)tl.lastChild.remove();
+}
 
 /* ---------- shortcuts cheat sheet ---------- */
 const KEYS=[["Ctrl+1…5","switch tab"],["Ctrl+N","new session"],["Ctrl+S","sessions"],
@@ -840,8 +913,10 @@ function hideHero0(){}
 listen("dragon", ev=>{
   const p=ev.payload;
   if(p.kind==="delta")appendStream(p.text);
-  else if(p.kind==="tool")addTool(p.name,p.detail);
-  else if(p.kind==="approval")addApprovalCard(p.id,p.tool,p.detail);
+  else if(p.kind==="tool"){addTool(p.name,p.detail);pushTimeline(p.name,p.detail);}
+  else if(p.kind==="approval"){pushTimeline("⚠ "+p.tool,p.detail);addApprovalCard(p.id,p.tool,p.detail);}
+  else if(p.kind==="usage"){tok.p=p.prompt;tok.c+=p.completion;tok.t=p.total;renderUsage();}
+  else if(p.kind==="tasks"){renderTasks(p.board);}
   else if(p.kind==="compacted")addSys("context compacted.");
   else if(p.kind==="stopped"){endStream();setBusy(false);addSys("stopped.");}
   else if(p.kind==="error")addSys("error: "+p.text);

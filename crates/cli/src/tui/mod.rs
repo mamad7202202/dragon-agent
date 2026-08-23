@@ -72,6 +72,9 @@ pub struct App {
     /// Input history (most recent last).
     hist_stack: Vec<String>,
     hist_pos: Option<usize>,
+    /// Live token usage of the running/last turn.
+    pub usage: (u64, u64, u64),
+    graph: Arc<Mutex<dragon_core::memory::graph::GraphStore>>,
     agent: Option<Arc<tokio::sync::Mutex<Agent>>>,
     session: Arc<Mutex<SessionLog>>,
     memory: Arc<Mutex<MemoryStore>>,
@@ -98,6 +101,12 @@ impl App {
         ag.set_mode(self.mode);
         ag.set_session(Some(&self.session_id));
         ag.set_auto_approve(self.config.settings.auto_approve.clone());
+        ag.set_thinking(self.config.settings.thinking_level());
+        ag.set_engine(if self.config.settings.graph_memory() {
+            Some(self.graph.clone())
+        } else {
+            None
+        });
     }
 
     fn push_char(&mut self, c: char) {
@@ -915,6 +924,25 @@ impl App {
                 self.scroll_offset = 0;
                 self.status = "approval needed".into();
             }
+            AgentEvent::Usage { prompt, completion, total } => {
+                self.usage = (prompt, completion, total);
+            }
+            AgentEvent::Tasks(board) => {
+                // pretty checklist entry
+                let mut s = String::from("task board:");
+                if let Some(list) = board.as_array() {
+                    for t in list {
+                        let text = t.get("text").and_then(|x| x.as_str()).unwrap_or("?");
+                        let done = t.get("status").and_then(|x| x.as_str()) == Some("done");
+                        s.push_str(&format!(
+                            "\n {} {}",
+                            if done { "[x]" } else { "[ ]" },
+                            text
+                        ));
+                    }
+                }
+                self.entries.push(Entry::System(s));
+            }
             AgentEvent::Error(e) => {
                 self.entries.push(Entry::System(format!("error: {e}")));
             }
@@ -1135,8 +1163,40 @@ keys: enter send - shift+enter newline - pgup/pgdn scroll
 // ------------------------------------------------------------------- launch
 
 pub async fn run(model_override: Option<String>) -> Result<()> {
+    // ---- pre-flight update gate -----------------------------------------
+    let mut offered_update = false;
+    match dragon_core::update::check(dragon_core::VERSION).await {
+        Ok(Some(u)) => {
+            offered_update = true;
+            println!();
+            println!(
+                "\x1b[38;2;255;205;112m\u{2b61} update available\x1b[0m  v{} \u{2192} {}",
+                dragon_core::VERSION, u.latest
+            );
+            println!("\x1b[2mrelease notes: {}\x1b[0m", u.url);
+            print!(
+                "\x1b[1m[o]\x1b[0m open the new version & exit     \x1b[1m[enter]\x1b[0m continue without updating > "
+            );
+            {
+                use std::io::Write as _;
+                let _ = std::io::stdout().flush();
+                let mut line = String::new();
+                let _ = std::io::stdin().read_line(&mut line);
+                let l = line.trim().to_ascii_lowercase();
+                if l.starts_with('o') || l.starts_with('u') || l.starts_with('y') {
+                    let url = dragon_core::update::latest_download_url(false);
+                    let _ = dragon_core::update::open_browser(&url);
+                    println!("opening browser: {url}");
+                    return Ok(());
+                }
+            }
+        }
+        _ => {}
+    }
+
     let config = Config::load()?;
     let memory = Arc::new(Mutex::new(MemoryStore::open()?));
+    let memory_graph = Arc::new(Mutex::new(dragon_core::memory::graph::GraphStore::open()?));
 
     let mode = Mode::parse(&config.settings.default_mode).unwrap_or(Mode::Agent);
 
@@ -1161,6 +1221,8 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
         update_note: None,
         hist_stack: Vec::new(),
         hist_pos: None,
+        usage: (0, 0, 0),
+        graph: memory_graph.clone(),
         agent: None,
         session: Arc::new(Mutex::new(SessionLog::create("(none)")?)),
         memory: memory.clone(),
@@ -1236,7 +1298,8 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
         });
     }
 
-    // update check -----------------------------------------------------------
+    // update check (skipped when the pre-flight gate already offered) --------
+    if !offered_update {
     {
         let tx = tx.clone();
         tokio::spawn(async move {
@@ -1247,6 +1310,7 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
                 .map(|u| format!("{} available (you have v{})", u.latest, u.current));
             let _ = tx.send(TuiEvent::Update(info));
         });
+    }
     }
 
     // main loop ----------------------------------------------------------------
@@ -1271,7 +1335,11 @@ pub async fn run(model_override: Option<String>) -> Result<()> {
                 Ok(())
             }
             TuiEvent::Agent(ae) => {
-                app.apply_agent_event(ae);
+                if matches!(ae, dragon_core::agent::AgentEvent::Usage { .. }) {
+                    app.apply_agent_event(ae);
+                } else {
+                    app.apply_agent_event(ae);
+                }
                 Ok(())
             }
             TuiEvent::TurnFinished(res) => {

@@ -45,6 +45,13 @@ pub struct Settings {
     /// Mode used when a session starts.
     #[serde(default = "default_mode")]
     pub default_mode: String,
+    /// Deep-thinking effort passed to models that support it:
+    /// "off" | "low" | "medium" | "high".
+    #[serde(default = "default_thinking")]
+    pub thinking: String,
+    /// Memory engine: classic hybrid facts or the compact memory graph.
+    #[serde(default = "default_engine")]
+    pub memory_engine: String,
 }
 
 fn default_compaction() -> usize {
@@ -55,6 +62,35 @@ fn default_theme() -> String {
 }
 fn default_mode() -> String {
     "agent".into()
+}
+fn default_thinking() -> String {
+    "off".into()
+}
+fn default_engine() -> String {
+    "hybrid".into()
+}
+
+impl Settings {
+    /// Normalized thinking level, ignoring unknown values.
+    pub fn thinking_level(&self) -> Thinking {
+        match self.thinking.as_str() {
+            "low" => Thinking::Low,
+            "medium" => Thinking::Medium,
+            "high" => Thinking::High,
+            _ => Thinking::Off,
+        }
+    }
+    pub fn graph_memory(&self) -> bool {
+        self.memory_engine == "graph"
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Thinking {
+    Off,
+    Low,
+    Medium,
+    High,
 }
 
 impl Default for ProviderCfg {

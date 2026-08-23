@@ -12,6 +12,8 @@ pub struct ToolCtx {
     pub allow_commands: bool,
     /// Current conversation id - used to scope save_memory.
     pub session_id: Option<String>,
+    /// Present when the memory-graph engine is selected.
+    pub graph: Option<Arc<Mutex<crate::memory::graph::GraphStore>>>,
 }
 
 /// Which approval tier a tool belongs to.
@@ -27,7 +29,7 @@ pub enum Tier {
 
 pub fn tier_of(name: &str) -> Tier {
     match name {
-        "read_file" | "list_files" | "grep" | "search_memory" | "fetch_url" => Tier::ReadOnly,
+        "read_file" | "list_files" | "grep" | "search_memory" | "fetch_url" | "web_search" | "task_write" | "graph_set_section" | "graph_read" => Tier::ReadOnly,
         "save_memory" => Tier::ReadOnly,
         "write_file" | "edit_file" | "delete_file" | "run_shell" => Tier::Gated,
         _ => Tier::AgentOnly,
@@ -58,13 +60,20 @@ fn prop(ty: &str, desc: &str) -> Value {
 }
 
 /// Tool list for the current mode. `allow_shell` reflects the settings gate.
-pub fn defs(mode: &crate::agent::Mode, allow_shell: bool) -> Vec<crate::provider::ToolDef> {
+pub fn defs(mode: &crate::agent::Mode, allow_shell: bool, graph_engine: bool) -> Vec<crate::provider::ToolDef> {
     use crate::provider::ToolDef;
     let mut v = vec![
         ToolDef {
             name: "read_file".into(),
             description: "Read a text file from disk.".into(),
-            parameters: schema(json_obj(&[("path", prop("string", "File path"))]), &["path"]),
+            parameters: schema(
+                json_obj(&[
+                    ("path", prop("string", "File path")),
+                    ("start_line", prop("number", "optional 1-based first line")),
+                    ("max_lines", prop("number", "optional cap on lines returned")),
+                ]),
+                &["path"],
+            ),
         },
         ToolDef {
             name: "write_file".into(),
@@ -115,6 +124,52 @@ pub fn defs(mode: &crate::agent::Mode, allow_shell: bool) -> Vec<crate::provider
             parameters: schema(json_obj(&[("command", prop("string", "The command line to run"))]), &["command"]),
         },
         ToolDef {
+            name: "web_search".into(),
+            description: "Search the web and return top results (title + url + snippet).".into(),
+            parameters: schema(
+                json_obj(&[("query", prop("string", "Search query"))]),
+                &["query"],
+            ),
+        },
+        ToolDef {
+            name: "task_write".into(),
+            description: "Replace your visible task board with this list. Call whenever the plan changes or a task finishes. Keep 3-9 tasks, short texts, status pending|done.".into(),
+            parameters: schema(
+                json_obj(&[
+                    ("tasks", json_obj(&{
+                        let mut o = serde_json::Map::new();
+                        o.insert("type".into(), Value::String("array".into()));
+                        o.insert("items".into(), json_obj(&[
+                            ("type", Value::String("object".into())),
+                            ("properties", json_obj(&[
+                                ("text", prop("string", "short task text")),
+                                ("status", json_obj(&[("type", Value::String("string".into())), ("enum", serde_json::json!(["pending","done"]))])),
+                            ])),
+                            ("required", serde_json::to_value(&["text"]).unwrap_or_default()),
+                        ]));
+                        Value::Object(o)
+                    })),
+                ]),
+                &["tasks"],
+            ),
+        },        ToolDef {
+            name: "graph_set_section".into(),
+            description: "Write one section of the memory graph (info-graph). Bullets must be terse facts. Empty bullets delete the section.".into(),
+            parameters: schema(
+                json_obj(&[
+                    ("scope", json_obj(&[("type", Value::String("string".into())), ("enum", serde_json::json!(["session","global"]))])),
+                    ("id", prop("string", "short slug e.g. proj/stack/decisions")),
+                    ("title", prop("string", "human title")),
+                    ("bullets", json_obj(&[("type", Value::String("array".into())), ("items", prop("string", "terse bullet"))])),
+                ]),
+                &["scope","id","title","bullets"],
+            ),
+        },
+        ToolDef {
+            name: "graph_read".into(),
+            description: "Read the current memory graph as compact text.".into(),
+            parameters: schema(json_obj(&[]), &[]),
+        },        ToolDef {
             name: "save_memory".into(),
             description: "Persist a fact to memory. Session facts describe THIS project/task; global facts are durable user preferences. Use scope=session by default; scope=global only for stable cross-project knowledge.".into(),
             parameters: schema(
@@ -139,6 +194,9 @@ pub fn defs(mode: &crate::agent::Mode, allow_shell: bool) -> Vec<crate::provider
     if !allow_shell {
         v.retain(|t| t.name != "run_shell");
     }
+    if !graph_engine {
+        v.retain(|t| !t.name.starts_with("graph_"));
+    }
     v
 }
 
@@ -154,7 +212,16 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
         "read_file" => {
             let p = arg_str(&args, "path")?;
             let raw = std::fs::read_to_string(&p).with_context(|| format!("cannot read {p}"))?;
-            clip(raw)
+            let start = args.get("start_line").and_then(|x| x.as_u64()).unwrap_or(1).max(1) as usize;
+            let max = args.get("max_lines").and_then(|x| x.as_u64()).unwrap_or(0) as usize;
+            if start > 1 || max > 0 {
+                let take = if max == 0 { usize::MAX } else { max };
+                let sel: Vec<&str> =
+                    raw.lines().skip(start - 1).take(take).collect();
+                clip(format!("[lines {start}..]\n{}", sel.join("\n")))
+            } else {
+                clip(raw)
+            }
         }
         "write_file" => {
             let p = arg_str(&args, "path")?;
@@ -205,6 +272,46 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
         "fetch_url" => {
             let url = arg_str(&args, "url")?;
             fetch_impl(url).await?
+        }
+        "web_search" => {
+            let q = arg_str(&args, "query")?;
+            web_search_impl(q).await?
+        }
+        "task_write" => {
+            let tasks = args.get("tasks").and_then(|t| t.as_array()).cloned().unwrap_or_default();
+            let mut lines = Vec::new();
+            for t in &tasks {
+                let text = t.get("text").and_then(|x| x.as_str()).unwrap_or("?").to_string();
+                let status = t.get("status").and_then(|x| x.as_str()).unwrap_or("pending").to_string();
+                lines.push(format!("[{status}] {text}"));
+            }
+            if let Some(sid) = &ctx.session_id {
+                let dir = crate::config::Config::data_dir().join("tasks");
+                let _ = std::fs::create_dir_all(&dir);
+                let _ = std::fs::write(
+                    dir.join(format!("{sid}.json")),
+                    serde_json::to_string_pretty(&args.get("tasks")).unwrap_or_default(),
+                );
+            }
+            if lines.is_empty() { "(empty board)".into() } else { lines.join("\n") }
+        }
+        "graph_set_section" => {
+            let Some(g) = &ctx.graph else { bail!("memory graph engine is not enabled") };
+            let scope = arg_str(&args, "scope")?;
+            let id = arg_str(&args, "id")?;
+            let title = arg_str(&args, "title")?;
+            let bullets: Vec<String> = args
+                .get("bullets")
+                .and_then(|b| b.as_array())
+                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .unwrap_or_default();
+            let sid = if scope == "global" { None } else { ctx.session_id.clone() };
+            g.lock().unwrap().set_section(sid.as_deref(), id, title, bullets)?;
+            format!("section '{id}' written ({scope})")
+        }
+        "graph_read" => {
+            let Some(g) = &ctx.graph else { bail!("memory graph engine is not enabled") };
+            g.lock().unwrap().read_text(ctx.session_id.as_deref())
         }
         "run_shell" => {
             if !ctx.allow_commands {
@@ -378,6 +485,61 @@ async fn fetch_impl(url: &str) -> Result<String> {
     Ok(clip(format!("{headers}{}", body.chars().take(MAX_OUTPUT).collect::<String>())))
 }
 
+/// Keyless web search via DuckDuckGo's HTML endpoint.
+async fn web_search_impl(query: &str) -> Result<String> {
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("Mozilla/5.0 (compatible; dragon-agent/", env!("CARGO_PKG_VERSION"), ")"))
+        .timeout(std::time::Duration::from_secs(12))
+        .build()?;
+    let html = client
+        .post("https://html.duckduckgo.com/html/")
+        .form(&[("q", query)])
+        .send()
+        .await
+        .context("search request failed")?
+        .text()
+        .await?;
+
+    let re_link = regex::Regex::new(r#"<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#).unwrap();
+    let re_snip = regex::Regex::new(r#"<a[^>]*class="result__snippet"[^>]*>(.*?)</a>"#).unwrap();
+    let re_tag = regex::Regex::new(r"<[^>]+>").unwrap();
+
+    let mut links: Vec<(String, String)> = Vec::new();
+    for cap in re_link.captures_iter(&html) {
+        let url = decode_html(&cap[1]);
+        let title = re_tag.replace_all(&decode_html(&cap[2]), "").to_string();
+        links.push((title.trim().to_string(), url));
+    }
+    let snippets: Vec<String> = re_snip
+        .captures_iter(&html)
+        .map(|c| re_tag.replace_all(&decode_html(&c[1]), "").to_string())
+        .collect();
+
+    if links.is_empty() {
+        return Ok("(no results)".into());
+    }
+    let n = links.len().min(6);
+    let mut out = String::new();
+    for i in 0..n {
+        let (t, u) = &links[i];
+        out.push_str(&format!("{}) {}\n   {}\n", i + 1, t, u));
+        if let Some(s) = snippets.get(i) {
+            let s: String = s.chars().take(200).collect();
+            out.push_str(&format!("   {s}\n"));
+        }
+        out.push('\n');
+    }
+    Ok(out.trim_end().to_string())
+}
+
+fn decode_html(s: &str) -> String {
+    s.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#x27;", "'")
+        .replace("&#x2F;", "/")
+}
 async fn run_command(cmd: &str) -> Result<String> {
     #[cfg(target_os = "windows")]
     let (program, args) = ("cmd", vec!["/C".to_string(), cmd.to_string()]);

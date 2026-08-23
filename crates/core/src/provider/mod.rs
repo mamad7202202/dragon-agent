@@ -65,6 +65,12 @@ pub struct ToolDef {
 pub enum StreamEvent {
     Delta(String),
     ToolCalls(Vec<ToolCall>),
+    /// Token accounting reported by the provider (best effort).
+    Usage {
+        prompt: u64,
+        completion: u64,
+        total: u64,
+    },
     Done,
 }
 
@@ -73,12 +79,14 @@ pub trait LlmProvider: Send + Sync {
     fn display_name(&self) -> &str;
 
     /// Stream a chat completion. Emits Delta events then either ToolCalls or Done.
+    /// `thinking` requests extended reasoning from models that support it.
     async fn stream_chat(
         &self,
         model: &str,
         system: Option<&str>,
         messages: &[Message],
         tools: &[ToolDef],
+        thinking: crate::config::Thinking,
         tx: UnboundedSender<StreamEvent>,
     ) -> Result<()>;
 }
@@ -96,7 +104,7 @@ pub async fn complete(
     let s = system.map(|x| x.to_string());
     let msgs = messages.to_vec();
     let handle = tokio::spawn(async move {
-        p.stream_chat(&m, s.as_deref(), &msgs, &[], tx).await
+        p.stream_chat(&m, s.as_deref(), &msgs, &[], crate::config::Thinking::Off, tx).await
     });
     let mut text = String::new();
     while let Some(ev) = rx.recv().await {

@@ -432,8 +432,20 @@ fn set_setting(key: &str, value: &str) -> Result<()> {
                 value.parse().context("expected a number")?;
         }
         "default_model" => cfg.default_model = Some(value.to_string()),
+        "thinking" => {
+            if !matches!(value, "off" | "low" | "medium" | "high") {
+                bail!("thinking must be one of: off, low, medium, high");
+            }
+            cfg.settings.thinking = value.into();
+        }
+        "memory_engine" => {
+            if value != "graph" && value != "hybrid" {
+                bail!("memory_engine must be: graph or hybrid");
+            }
+            cfg.settings.memory_engine = value.into();
+        }
         other => bail!(
-            "unknown setting '{other}' (known: allow_commands, compaction_messages, default_model)"
+            "unknown setting '{other}' (known: allow_commands, compaction_messages, default_model, thinking, memory_engine)"
         ),
     }
     cfg.save()?;

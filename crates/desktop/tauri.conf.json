@@ -3,7 +3,7 @@
   "productName": "Dragon Agent",
   "identifier": "ir.dragon.agent",
   "build": {
-    "frontendDist": "../ui"
+    "frontendDist": "ui"
   },
   "app": {
     "withGlobalTauri": true,

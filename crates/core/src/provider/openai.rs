@@ -116,6 +116,7 @@ impl LlmProvider for OpenAiCompat {
                 .send()
                 .await?;
             if r.status().is_client_error() {
+                let status = r.status();
                 let txt = r.text().await.unwrap_or_default();
                 let lower = txt.to_lowercase();
                 if !no_think && lower.contains("reasoning") {
@@ -126,7 +127,7 @@ impl LlmProvider for OpenAiCompat {
                     no_usage = true;
                     continue;
                 }
-                bail!("{} returned {}: {}", self.cfg.name, r.status(), truncate(&txt, 500));
+                bail!("{} returned {}: {}", self.cfg.name, status, truncate(&txt, 500));
             }
             break r;
         };

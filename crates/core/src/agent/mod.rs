@@ -95,7 +95,7 @@ impl Agent {
             model: model.into(),
             base_system,
             history: Vec::new(),
-            ctx: tools::ToolCtx { memory, allow_commands, session_id: None },
+            ctx: tools::ToolCtx { memory, allow_commands, session_id: None, graph: None },
             compaction_after,
             tools_enabled: true,
             mode: Mode::default(),
@@ -203,8 +203,9 @@ impl Agent {
                 vec![]
             };
 
+            let thinking = self.thinking;
             let handle = tokio::spawn(async move {
-                provider.stream_chat(&model, Some(&system), &msgs, &tdefs, self.thinking, etx).await
+                provider.stream_chat(&model, Some(&system), &msgs, &tdefs, thinking, etx).await
             });
 
             let mut text = String::new();
@@ -326,7 +327,7 @@ impl tools::ToolCtx {
             memory: self.memory.clone(),
             allow_commands: self.allow_commands,
             session_id: self.session_id.clone(),
-            graph: self.ctx.graph.clone(),
+            graph: self.graph.clone(),
         }
     }
 }

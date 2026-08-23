@@ -133,25 +133,27 @@ pub fn defs(mode: &crate::agent::Mode, allow_shell: bool, graph_engine: bool) ->
         },
         ToolDef {
             name: "task_write".into(),
-            description: "Replace your visible task board with this list. Call whenever the plan changes or a task finishes. Keep 3-9 tasks, short texts, status pending|done.".into(),
-            parameters: schema(
-                json_obj(&[
-                    ("tasks", json_obj(&{
-                        let mut o = serde_json::Map::new();
-                        o.insert("type".into(), Value::String("array".into()));
-                        o.insert("items".into(), json_obj(&[
-                            ("type", Value::String("object".into())),
-                            ("properties", json_obj(&[
-                                ("text", prop("string", "short task text")),
-                                ("status", json_obj(&[("type", Value::String("string".into())), ("enum", serde_json::json!(["pending","done"]))])),
-                            ])),
-                            ("required", serde_json::to_value(&["text"]).unwrap_or_default()),
-                        ]));
-                        Value::Object(o)
-                    })),
-                ]),
-                &["tasks"],
-            ),
+            description: "Replace your visible task board with this list. Call whenever the plan changes or a task finishes. Keep 3-9 short tasks; status is pending or done.".into(),
+            parameters: {
+                let item = json_obj(&[
+                    ("type", Value::String("object".into())),
+                    ("properties", json_obj(&[
+                        ("text", prop("string", "short task text")),
+                        ("status", json_obj(&[
+                            ("type", Value::String("string".into())),
+                            ("enum", serde_json::json!(["pending", "done"])),
+                        ])),
+                    ])),
+                    ("required", serde_json::json!(["text"])),
+                ]);
+                let mut arr = serde_json::Map::new();
+                arr.insert("type".into(), Value::String("array".into()));
+                arr.insert("items".into(), item);
+                schema(
+                    json_obj(&[("tasks", Value::Object(arr))]),
+                    &["tasks"],
+                )
+            },
         },        ToolDef {
             name: "graph_set_section".into(),
             description: "Write one section of the memory graph (info-graph). Bullets must be terse facts. Empty bullets delete the section.".into(),

@@ -226,6 +226,9 @@ pub fn procedural_memory() -> Option<String> {
 
 // ------------------------------------------------------------------ scoring
 
+pub fn tokenize_pub(s: &str) -> Vec<String> { tokenize(s) }
+pub fn cosine_pub(a: &[String], b: &[String]) -> f32 { cosine(a, b) }
+
 fn normalize(s: &str) -> String {
     s.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ")
 }

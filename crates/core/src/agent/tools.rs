@@ -163,6 +163,8 @@ pub fn defs(mode: &crate::agent::Mode, allow_shell: bool, graph_engine: bool) ->
                     ("id", prop("string", "short slug e.g. proj/stack/decisions")),
                     ("title", prop("string", "human title")),
                     ("bullets", json_obj(&[("type", Value::String("array".into())), ("items", prop("string", "terse bullet"))])),
+                    ("kinds", json_obj(&[("type", Value::String("array".into())), ("items", json_obj(&[("type", Value::String("string".into())), ("enum", serde_json::json!(["fact","decision","task","context","lesson"]))]))])),
+                    ("confidence", json_obj(&[("type", Value::String("array".into())), ("items", prop("number", "0-1"))])),
                 ]),
                 &["scope","id","title","bullets"],
             ),
@@ -302,18 +304,41 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
             let scope = arg_str(&args, "scope")?;
             let id = arg_str(&args, "id")?;
             let title = arg_str(&args, "title")?;
-            let bullets: Vec<String> = args
-                .get("bullets")
-                .and_then(|b| b.as_array())
-                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-                .unwrap_or_default();
+            let texts = args.get("bullets").and_then(|b| b.as_array()).cloned().unwrap_or_default();
+            let kinds = args.get("kinds").and_then(|b| b.as_array()).cloned().unwrap_or_default();
+            let confs = args.get("confidence").and_then(|b| b.as_array()).cloned().unwrap_or_default();
+            use dragon_core::memory::graph::Kind as GKind;
+            let mut triples: Vec<(String, GKind, f32)> = Vec::new();
+            for (i, t) in texts.iter().enumerate() {
+                let Some(text) = t.as_str() else { continue };
+                let kind = kinds
+                    .get(i)
+                    .and_then(|v| v.as_str())
+                    .map(GKind::parse)
+                    .unwrap_or(GKind::Fact);
+                let conf = confs.get(i).and_then(|v| v.as_f64()).unwrap_or(0.85) as f32;
+                triples.push((text.to_string(), kind, conf));
+            }
             let sid = if scope == "global" { None } else { ctx.session_id.clone() };
-            g.lock().unwrap().set_section(sid.as_deref(), id, title, bullets)?;
-            format!("section '{id}' written ({scope})")
+            g.lock().unwrap().set_section(sid.as_deref(), id, title, triples)?;
+            format!("section '{id}' written ({scope}, {} bullets)", triples.len())
         }
         "graph_read" => {
             let Some(g) = &ctx.graph else { bail!("memory graph engine is not enabled") };
             g.lock().unwrap().read_text(ctx.session_id.as_deref())
+        }
+        "graph_search" => {
+            let Some(g) = &ctx.graph else { bail!("memory graph engine is not enabled") };
+            let q = arg_str(&args, "query")?;
+            let hits = g.lock().unwrap().search(q, 6, ctx.session_id.as_deref());
+            if hits.is_empty() {
+                "(no matches)".into()
+            } else {
+                hits.iter()
+                    .map(|(sid, title, text)| format!("[{sid}/{title}] {text}"))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }
         }
         "run_shell" => {
             if !ctx.allow_commands {

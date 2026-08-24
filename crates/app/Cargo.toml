@@ -1,0 +1,26 @@
+[package]
+name = "dragon-gui"
+description = "Dragon Agent desktop app - pure Rust GPU-styled UI (dgpui)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "dragon-gui"
+path = "src/main.rs"
+
+[dependencies]
+dragon-core = { path = "../core" }
+winit = "0.30"
+softbuffer = "0.4"
+tiny-skia = "0.11"
+cosmic-text = "0.12"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+serde_json = "1"
+anyhow = "1"
+
+[package.metadata.notes]
+identity = "dgpui - Dragon's own immediate-mode UI kit (winit+softbuffer+tiny-skia+cosmic-text), GPUI-inspired architecture, zero web stack"

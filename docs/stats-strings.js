@@ -1,0 +1,42 @@
+/* Dragon Agent stats page strings */
+DG_LANG({
+en:{
+ title:"Live Stats — Dragon Agent",
+ nHome:"home",nDocs:"docs",nStats:"live stats",nGh:"github ↗",
+ h1:"Live project stats",
+ sub:"fetched straight from the GitHub API in your browser — nothing cached, nothing faked",
+ lStars:"stars",lForks:"forks",lWatch:"watchers",lIssues:"open issues",
+ lCommits:"commits · year",lDls:"total downloads",
+ cChartT:"Commit activity — last 52 weeks",
+ cChartS:"real commit counts per week, straight from the repository",
+ peak:"{n} commits/week peak",
+ relT:"Latest release downloads",
+ langsT:"Languages",langsS:"bytes of code by language",
+ contribT:"Top contributors",contribS:"by commit count",
+ unitCommits:"commits",
+ refreshNote:"auto-refreshes every 60s · GitHub API rate limit is 60 req/hour per visitor",
+ errComputing:"GitHub is computing statistics — reload in a moment.",
+ errNoRelease:"no release published yet.",
+ errApi:"couldn't reach the GitHub API ({m}) — rate limits reset hourly; try again later.",
+ madeBy:"created by",fHome:"home",fDocs:"docs"
+},
+fa:{
+ title:"آمار زنده — Dragon Agent",
+ nHome:"خانه",nDocs:"مستندات",nStats:"آمار زنده",nGh:"گیت‌هاب ↗",
+ h1:"آمار زنده‌ی پروژه",
+ sub:"مستقیم از API گیت‌هاب، در مرورگر خودتان — نه کش شده، نه ساختگی",
+ lStars:"ستاره",lForks:"فورک",lWatch:"ناظران",lIssues:"ایشوهای باز",
+ lCommits:"کامیت · یک سال",lDls:"کل دانلودها",
+ cChartT:"فعالیت کامیت — ۵۲ هفته‌ی گذشته",
+ cChartS:"شمار واقعی کامیت هر هفته، مستقیم از مخزن",
+ peak:"اوج: {n} کامیت در هفته",
+ relT:"دانلودهای آخرین انتشار",
+ langsT:"زبان‌ها",langsS:"بایت کد به تفکیک زبان",
+ contribT:"مهم‌ترین مشارکت‌کنندگان",contribS:"به شمار کامیت",
+ unitCommits:"کامیت",
+ refreshNote:"هر ۶۰ ثانیه خودش تازه می‌شود · سقف API گیت‌هاب: ۶۰ درخواست در ساعت برای هر بازدیدکننده",
+ errComputing:"گیت‌هاب مشغول محاسبه‌ی آمار است — چند لحظه بعد رفرش کنید.",
+ errNoRelease:"هنوز هیچ انتشاری ثبت نشده است.",
+ errApi:"اتصال به API گیت‌هاب برقرار نشد ({m}) — سقف نرخ هر ساعت صفر می‌شود؛ بعداً دوباره امتحان کنید.",
+ madeBy:"ساخته‌ی",fHome:"خانه",fDocs:"مستندات"
+}});

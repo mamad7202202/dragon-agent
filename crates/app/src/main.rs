@@ -847,7 +847,7 @@ impl Handler {
         fr.rect(W - 30, hy + 11, 8, 8, Frame::rgb(if self.model.agent.is_some() { JADE } else { BLOOD }));
 
         let cx = rx + 74;
-        let cw = (W - cx - 16) as u32;
+        let cw = W - cx - 16;
 
         match self.model.tab {
             Tab::Chat => self.paint_chat(&mut fr, cx, hy + 44, cw, H),
@@ -901,13 +901,13 @@ impl Handler {
         win.window.request_redraw();
     }
 
-    fn paint_chat(&mut self, fr: &mut Frame, x: i32, y: i32, w: u32, H: i32) {
+    fn paint_chat(&mut self, fr: &mut Frame, x: i32, y: i32, w: i32, H: i32) {
         let comp_h = 100;
         let clip_bottom = H - comp_h - 26;
         fr.bottom_shadow(x, w, H - comp_h - 20, 130, fr.theme.name == ThemeName::Dark);
 
         let pad = 18;
-        let iw = w.saturating_sub(pad * 2);
+        let iw = w - pad * 2;
         let mut yy = y + 6 - self.model.scroll;
         for item in self.model.items.clone() {
             if yy > clip_bottom {
@@ -939,7 +939,7 @@ impl Handler {
         fr.outline(x, gy, w, comp_h - 14, 20.0, 1.5, Frame::rgb(if self.model.focus.as_deref() == Some("draft") { EMBER } else { fr.theme.line }));
         let fw = w - 140;
         fr.field(x + 14, gy + 14, fw, focus_is_draft(&self.model), &self.model.draft.value, "message...", "focus:draft", self.model.draft.caret);
-        let bx = x + w as i32 - 106;
+        let bx = x + w - 106;
         if self.model.busy {
             fr.button(bx, gy + 14, "stop", "stop", false);
         } else {
@@ -980,7 +980,7 @@ impl Handler {
             }
             Item::Approval(id, tool, detail) => {
                 let _ = id;
-                let cw = (w as f32 * 0.9) as u32;
+                let cw = (w as f32 * 0.9) as i32;
                 let ch = 152;
                 fr.rounded(x, y, cw, ch, 14.0, Frame::rgba(GOLD, 0.07));
                 fr.outline(x, y, cw, ch, 14.0, 1.4, Frame::rgb(GOLD));
@@ -1020,7 +1020,7 @@ impl Handler {
         }
     }
 
-    fn paint_memory(&mut self, fr: &mut Frame, x: i32, y: i32, w: u32, _H: i32) {
+    fn paint_memory(&mut self, fr: &mut Frame, x: i32, y: i32, w: i32, _H: i32) {
         fr.text(x, y, w, 20.0, fr.theme.bone, "Memory graph", true);
         fr.text(x, y + 30, w, 12.3, fr.theme.ash,
             &format!("engine: {} · confidence decays with disuse; archival fades away", self.model.cfg.settings.memory_engine), false);
@@ -1045,7 +1045,7 @@ impl Handler {
                 let line = format!("{tag} {}", b.text);
                 let h = fr.measure(w - 70, 13.0, &line, false);
                 fr.text(x + 14, yy, w - 76, 13.0, color, &line, false);
-                fr.text(x + w as i32 - 52, yy, 50, 10.5, fr.theme.line,
+                fr.text(x + w - 52, yy, 50, 10.5, fr.theme.line,
                     &format!("{:.0}", b.confidence * 100.0), false);
                 yy += h + 6;
             }
@@ -1057,10 +1057,10 @@ impl Handler {
         }
     }
 
-    fn paint_providers(&mut self, fr: &mut Frame, x: i32, y: i32, w: u32, _H: i32) {
+    fn paint_providers(&mut self, fr: &mut Frame, x: i32, y: i32, w: i32, _H: i32) {
         fr.text(x, y, w, 20.0, fr.theme.bone, "Providers", true);
         fr.text(x, y + 30, w, 12.3, fr.theme.ash, "bring your own key — stored locally only", false);
-        fr.button(x + w as i32 - 160, y - 4,
+        fr.button(x + w - 160, y - 4,
                   if self.model.form_open { "close form" } else { "+ add provider" },
                   "form-open", false);
 
@@ -1072,11 +1072,11 @@ impl Handler {
             fr.outline(x, yy, w, 62, 13.0, 1.0, Frame::rgb(fr.theme.line));
             fr.text(x + 16, yy + 9, 400, 14.5, if is_def { GOLD } else { fr.theme.bone }, &p.name, true);
             if is_def {
-                fr.text(x + w as i32 - 108, yy + 9, 96, 11.0, GOLD, "default", false);
+                fr.text(x + w - 108, yy + 9, 96, 11.0, GOLD, "default", false);
             }
             fr.text(x + 16, yy + 34, w - 220, 11.3, fr.theme.ash, &p.base_url, false);
             let joined = p.models.iter().take(2).cloned().collect::<Vec<_>>().join(", ");
-            fr.text(x + w as i32 - 210, yy + 34, 196, 11.0, FLAME, &joined, false);
+            fr.text(x + w - 210, yy + 34, 196, 11.0, FLAME, &joined, false);
             yy += 74;
         }
 
@@ -1106,11 +1106,11 @@ impl Handler {
                      &self.model.f_key.value, "api key", "focus:f_key", self.model.f_key.caret);
             fr.field(x + 18, yy + 162, w - 260, self.model.focus.as_deref() == Some("f_models"),
                      &self.model.f_models.value, "models, comma separated", "focus:f_models", self.model.f_models.caret);
-            fr.button(x + w as i32 - 230, yy + 164, "save provider", "form-save", true);
+            fr.button(x + w - 230, yy + 164, "save provider", "form-save", true);
         }
     }
 
-    fn paint_settings(&mut self, fr: &mut Frame, x: i32, y: i32, w: u32, _H: i32) {
+    fn paint_settings(&mut self, fr: &mut Frame, x: i32, y: i32, w: i32, _H: i32) {
         fr.text(x, y, w, 20.0, fr.theme.bone, "Settings", true);
         let mut yy = y + 54;
 
@@ -1132,10 +1132,10 @@ impl Handler {
             fr.rounded(x, yy, w, 58, 13.0, Frame::rgba(fr.theme.panel, 0.92));
             fr.text(x + 18, yy + 10, w - 120, 14.2, fr.theme.bone, &title, false);
             fr.text(x + 18, yy + 32, w - 120, 11.5, fr.theme.ash, &sub, false);
-            fr.rounded(x + w as i32 - 72, yy + 15, 48, 26, 999.0,
+            fr.rounded(x + w - 72, yy + 15, 48, 26, 999.0,
                        Frame::rgb(if on { EMBER } else { fr.theme.line }));
-            fr.rect(x + w as i32 - 70 + if on { 24 } else { 3 }, yy + 17, 21, 21, Frame::rgb([255, 255, 255]));
-            fr.hits.push(Hit { rect: (x + w as i32 - 76, yy + 8, 66, 40), action: action.into() });
+            fr.rect(x + w - 70 + if on { 24 } else { 3 }, yy + 17, 21, 21, Frame::rgb([255, 255, 255]));
+            fr.hits.push(Hit { rect: (x + w - 76, yy + 8, 66, 40), action: action.into() });
             yy += 68;
         }
         fr.text(x, yy + 8, w, 11.5, fr.theme.line,

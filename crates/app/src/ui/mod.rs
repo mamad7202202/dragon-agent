@@ -97,6 +97,13 @@ fn rr_path(b: &mut tiny_skia::PathBuilder, x: f32, y: f32, w: f32, h: f32, r0: f
 }
 
 impl<'a> Frame<'a> {
+    pub fn rgb(c: [u8; 3]) -> tiny_skia::Color {
+        rgb(c)
+    }
+    pub fn rgba(c: [u8; 3], a: f32) -> tiny_skia::Color {
+        rgba(c, a)
+    }
+
     pub fn fill_all(&mut self, c: [u8; 3]) {
         self.pix.fill(rgb(c));
     }

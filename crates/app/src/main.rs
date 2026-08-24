@@ -898,7 +898,7 @@ impl Handler {
             *dst = ((src[0] as u32) << 16) | ((src[1] as u32) << 8) | src[2] as u32;
         }
         let _ = buf.present();
-        if let Some(w) = &warc { w.request_redraw(); }
+        win.window.request_redraw();
     }
 
     fn paint_chat(&mut self, fr: &mut Frame, x: i32, y: i32, w: u32, H: i32) {
@@ -1175,20 +1175,7 @@ fn fmt_tok(n: u64) -> String {
     }
 }
 
-/// Map a winit logical-key string like "Character('a')" / named keys back to a char.
-fn strip_char(other: &str) -> Option<char> {
-    if let Some(rest) = other.strip_prefix('\'') {
-        if let Some(c) = rest.chars().next() {
-            if c != '\'' {
-                return Some(c);
-            }
-        }
-    }
-    if other.chars().count() == 1 {
-        return other.chars().next();
-    }
-    None
-}
+
 
 fn main() -> Result<()> {
     let cfg = Config::load()?;

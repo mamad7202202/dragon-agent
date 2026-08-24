@@ -941,7 +941,7 @@ impl Handler {
         fr.rounded(x, gy, w, comp_h - 14, 20.0, Frame::rgba(fr.theme.panel2, 0.55));
         fr.outline(x, gy, w, comp_h - 14, 20.0, 1.5, Frame::rgb(if model.focus.as_deref() == Some("draft") { EMBER } else { fr.theme.line }));
         let fw = w - 140;
-        fr.field(x + 14, gy + 14, fw, focus_is_draft(&self.model), &model.draft.value, "message...", "focus:draft", model.draft.caret);
+        fr.field(x + 14, gy + 14, fw, true, &model.draft.value, "message...", "focus:draft", model.draft.caret);
         let bx = x + w - 106;
         if model.busy {
             fr.button(bx, gy + 14, "stop", "stop", false);
@@ -1150,9 +1150,6 @@ fn custom_idx(i: usize) -> bool {
     i >= presets::PRESETS.len()
 }
 
-fn focus_is_draft(_m: &Model) -> bool {
-    true
-}
 
 fn md_lite(t: &str) -> String {
     t.replace("**", "").replace('`', "")

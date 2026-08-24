@@ -407,21 +407,24 @@ impl ApplicationHandler for Handler {
     }
 
     fn about_to_wait(&mut self, _el: &ActiveEventLoop) {
+        let mut got = false;
+        loop {
+            match self.rx.try_recv() {
+                Ok(ev) => {
+                    self.model.handle(ev);
+                    got = true;
+                }
+                Err(_) => break,
+            }
+        }
         if let Some(w) = &self.win {
-            if self.model.busy || self.rx.len() > 0 {
+            if self.model.busy || got {
                 w.window.request_redraw();
             }
         }
     }
 
     fn window_event(&mut self, el: &ActiveEventLoop, _id: winit::window::WindowId, ev: WindowEvent) {
-        // drain events
-        loop {
-            match self.rx.try_recv() {
-                Ok(ev) => self.model.handle(ev),
-                Err(_) => break,
-            }
-        }
         let warc = self.win.as_ref().map(|w| w.window.clone());
 
         match ev {
@@ -850,10 +853,10 @@ impl Handler {
         let cw = W - cx - 16;
 
         match self.model.tab {
-            Tab::Chat => self.paint_chat(&mut fr, cx, hy + 44, cw, H),
-            Tab::Memory => self.paint_memory(&mut fr, cx, hy + 44, cw, H),
-            Tab::Providers => self.paint_providers(&mut fr, cx, hy + 44, cw, H),
-            Tab::Settings => self.paint_settings(&mut fr, cx, hy + 44, cw, H),
+            Tab::Chat => Self::paint_chat(&mut fr, &self.model, cx, hy + 44, cw, H),
+            Tab::Memory => Self::paint_memory(&mut fr, &self.model, cx, hy + 44, cw, H),
+            Tab::Providers => Self::paint_providers(&mut fr, &self.model, cx, hy + 44, cw, H),
+            Tab::Settings => Self::paint_settings(&mut fr, &self.model, cx, hy + 44, cw, H),
             Tab::About => {
                 let cy = H / 3;
                 let tw = ("DRAGON AGENT".len() as i32) * 20;
@@ -901,22 +904,22 @@ impl Handler {
         win.window.request_redraw();
     }
 
-    fn paint_chat(&mut self, fr: &mut Frame, x: i32, y: i32, w: i32, H: i32) {
+    fn paint_chat(fr: &mut Frame, model: &Model, x: i32, y: i32, w: i32, H: i32) {
         let comp_h = 100;
         let clip_bottom = H - comp_h - 26;
         fr.bottom_shadow(x, w, H - comp_h - 20, 130, fr.theme.name == ThemeName::Dark);
 
         let pad = 18;
         let iw = w - pad * 2;
-        let mut yy = y + 6 - self.model.scroll;
-        for item in self.model.items.clone() {
+        let mut yy = y + 6 - model.scroll;
+        for item in model.items.clone() {
             if yy > clip_bottom {
                 break;
             }
-            let hh = self.paint_item(fr, &item, x + pad, iw as i32, yy, clip_bottom);
+            let hh = Self::paint_item(fr, &item, x + pad, iw as i32, yy, clip_bottom);
             yy += hh + 14;
         }
-        if let Some(s) = &self.model.streaming {
+        if let Some(s) = &model.streaming {
             let bh = fr.measure(iw - 40, 13.8, s, false).max(30) + 30;
             if yy < clip_bottom {
                 fr.rounded(x + pad, yy, iw, bh, 14.0, Frame::rgba(fr.theme.panel, 0.95));
@@ -926,28 +929,28 @@ impl Handler {
         }
 
         // status
-        let status_txt = if self.model.pending.is_some() {
+        let status_txt = if model.pending.is_some() {
             "PERMISSION REQUESTED — y allow · a always · n deny · d explain".to_string()
         } else {
-            self.model.status.clone()
+            model.status.clone()
         };
-        fr.text(x + pad, H - comp_h - 20, w, 11.5, if self.model.pending.is_some() { GOLD } else { fr.theme.ash }, &status_txt, false);
+        fr.text(x + pad, H - comp_h - 20, w, 11.5, if model.pending.is_some() { GOLD } else { fr.theme.ash }, &status_txt, false);
 
         // glass composer
         let gy = H - comp_h;
         fr.rounded(x, gy, w, comp_h - 14, 20.0, Frame::rgba(fr.theme.panel2, 0.55));
-        fr.outline(x, gy, w, comp_h - 14, 20.0, 1.5, Frame::rgb(if self.model.focus.as_deref() == Some("draft") { EMBER } else { fr.theme.line }));
+        fr.outline(x, gy, w, comp_h - 14, 20.0, 1.5, Frame::rgb(if model.focus.as_deref() == Some("draft") { EMBER } else { fr.theme.line }));
         let fw = w - 140;
-        fr.field(x + 14, gy + 14, fw, focus_is_draft(&self.model), &self.model.draft.value, "message...", "focus:draft", self.model.draft.caret);
+        fr.field(x + 14, gy + 14, fw, focus_is_draft(&self.model), &model.draft.value, "message...", "focus:draft", model.draft.caret);
         let bx = x + w - 106;
-        if self.model.busy {
+        if model.busy {
             fr.button(bx, gy + 14, "stop", "stop", false);
         } else {
             fr.button(bx, gy + 14, "send", "send", true);
         }
     }
 
-    fn paint_item(&mut self, fr: &mut Frame, item: &Item, x: i32, w: i32, y: i32, _clip: i32) -> i32 {
+    fn paint_item(fr: &mut Frame, item: &Item, x: i32, w: i32, y: i32, _clip: i32) -> i32 {
         match item {
             Item::User(t) => {
                 let half = w / 2;
@@ -1020,11 +1023,11 @@ impl Handler {
         }
     }
 
-    fn paint_memory(&mut self, fr: &mut Frame, x: i32, y: i32, w: i32, _H: i32) {
+    fn paint_memory(fr: &mut Frame, model: &Model, x: i32, y: i32, w: i32, _H: i32) {
         fr.text(x, y, w, 20.0, fr.theme.bone, "Memory graph", true);
         fr.text(x, y + 30, w, 12.3, fr.theme.ash,
-            &format!("engine: {} · confidence decays with disuse; archival fades away", self.model.cfg.settings.memory_engine), false);
-        let snap = self.model.graph.lock().unwrap().snapshot(Some(&self.model.session_id));
+            &format!("engine: {} · confidence decays with disuse; archival fades away", model.cfg.settings.memory_engine), false);
+        let snap = model.graph.lock().unwrap().snapshot(Some(&model.session_id));
         let mut yy = y + 62;
         for (label, bullets) in snap {
             fr.text(x, yy, w, 12.0, GOLD, &label.to_uppercase(), true);
@@ -1057,16 +1060,16 @@ impl Handler {
         }
     }
 
-    fn paint_providers(&mut self, fr: &mut Frame, x: i32, y: i32, w: i32, _H: i32) {
+    fn paint_providers(fr: &mut Frame, model: &Model, x: i32, y: i32, w: i32, _H: i32) {
         fr.text(x, y, w, 20.0, fr.theme.bone, "Providers", true);
         fr.text(x, y + 30, w, 12.3, fr.theme.ash, "bring your own key — stored locally only", false);
         fr.button(x + w - 160, y - 4,
-                  if self.model.form_open { "close form" } else { "+ add provider" },
+                  if model.form_open { "close form" } else { "+ add provider" },
                   "form-open", false);
 
         let mut yy = y + 60;
-        for p in self.model.cfg.providers.clone() {
-            let is_def = self.model.cfg.default_model.as_deref()
+        for p in model.cfg.providers.clone() {
+            let is_def = model.cfg.default_model.as_deref()
                 .map(|d| d.starts_with(&format!("{}/", p.name))).unwrap_or(false);
             fr.rounded(x, yy, w, 62, 13.0, Frame::rgba(fr.theme.panel, 0.92));
             fr.outline(x, yy, w, 62, 13.0, 1.0, Frame::rgb(fr.theme.line));
@@ -1080,52 +1083,52 @@ impl Handler {
             yy += 74;
         }
 
-        if self.model.form_open {
+        if model.form_open {
             yy += 8;
             fr.rounded(x, yy, w, 250, 15.0, Frame::rgba(fr.theme.panel, 0.96));
             fr.outline(x, yy, w, 250, 15.0, 1.2, Frame::rgb(fr.theme.line));
-            let custom = custom_idx(self.model.pv_idx);
+            let custom = custom_idx(model.pv_idx);
             let pname = if custom {
                 "custom"
             } else {
-                presets::PRESETS.get(self.model.pv_idx).map(|p| p.name).unwrap_or("?")
+                presets::PRESETS.get(model.pv_idx).map(|p| p.name).unwrap_or("?")
             };
             let mut fx = x + 18;
             fx += fr.chip(fx, yy + 14, &format!("preset: {pname}"), "pv-preset", true) + 14;
             if !custom {
-                if let Some(p) = presets::PRESETS.get(self.model.pv_idx) {
+                if let Some(p) = presets::PRESETS.get(model.pv_idx) {
                     fr.text(fx, yy + 22, w - (fx - x) - 20, 11.5, GOLD, p.note, false);
                 }
             } else {
-                fr.field(fx, yy + 8, 220, self.model.focus.as_deref() == Some("f_name"),
-                         &self.model.f_name.value, "provider name", "focus:f_name", self.model.f_name.caret);
+                fr.field(fx, yy + 8, 220, model.focus.as_deref() == Some("f_name"),
+                         &model.f_name.value, "provider name", "focus:f_name", model.f_name.caret);
             }
-            fr.field(x + 18, yy + 58, w - 36, self.model.focus.as_deref() == Some("f_url"),
-                     &self.model.f_url.value, "base url https://…", "focus:f_url", self.model.f_url.caret);
-            fr.field(x + 18, yy + 110, w - 36, self.model.focus.as_deref() == Some("f_key"),
-                     &self.model.f_key.value, "api key", "focus:f_key", self.model.f_key.caret);
-            fr.field(x + 18, yy + 162, w - 260, self.model.focus.as_deref() == Some("f_models"),
-                     &self.model.f_models.value, "models, comma separated", "focus:f_models", self.model.f_models.caret);
+            fr.field(x + 18, yy + 58, w - 36, model.focus.as_deref() == Some("f_url"),
+                     &model.f_url.value, "base url https://…", "focus:f_url", model.f_url.caret);
+            fr.field(x + 18, yy + 110, w - 36, model.focus.as_deref() == Some("f_key"),
+                     &model.f_key.value, "api key", "focus:f_key", model.f_key.caret);
+            fr.field(x + 18, yy + 162, w - 260, model.focus.as_deref() == Some("f_models"),
+                     &model.f_models.value, "models, comma separated", "focus:f_models", model.f_models.caret);
             fr.button(x + w - 230, yy + 164, "save provider", "form-save", true);
         }
     }
 
-    fn paint_settings(&mut self, fr: &mut Frame, x: i32, y: i32, w: i32, _H: i32) {
+    fn paint_settings(fr: &mut Frame, model: &Model, x: i32, y: i32, w: i32, _H: i32) {
         fr.text(x, y, w, 20.0, fr.theme.bone, "Settings", true);
         let mut yy = y + 54;
 
         let rows: [(String, String, bool, &str); 3] = [
             ("Allow shell commands".into(),
              "run_shell can execute commands here (still asks per action)".into(),
-             self.model.cfg.settings.allow_commands,
+             model.cfg.settings.allow_commands,
              "toggle-shell"),
-            (format!("Memory engine: {}", self.model.cfg.settings.memory_engine),
+            (format!("Memory engine: {}", model.cfg.settings.memory_engine),
              "graph = info-graph maintained by the model · hybrid = scored facts".into(),
-             self.model.cfg.settings.graph_memory(),
+             model.cfg.settings.graph_memory(),
              "toggle-graph"),
-            (format!("Deep thinking: {}", self.model.cfg.settings.thinking),
+            (format!("Deep thinking: {}", model.cfg.settings.thinking),
              "off / low / medium / high reasoning effort".into(),
-             self.model.cfg.settings.thinking != "off",
+             model.cfg.settings.thinking != "off",
              "cycle-thinking"),
         ];
         for (title, sub, on, action) in rows {

@@ -320,8 +320,9 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
                 triples.push((text.to_string(), kind, conf));
             }
             let sid = if scope == "global" { None } else { ctx.session_id.clone() };
+            let n_written = triples.len();
             g.lock().unwrap().set_section(sid.as_deref(), id, title, triples)?;
-            format!("section '{id}' written ({scope}, {} bullets)", triples.len())
+            format!("section '{id}' written ({scope}, {n_written} bullets)")
         }
         "graph_read" => {
             let Some(g) = &ctx.graph else { bail!("memory graph engine is not enabled") };

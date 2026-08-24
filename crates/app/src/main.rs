@@ -796,7 +796,7 @@ impl Handler {
             fr.rounded(hx, 9, wpx, 27, 999.0, Frame::rgba(GOLD, 0.14));
             fr.outline(hx, 9, wpx, 27, 999.0, 1.2, Frame::rgb(GOLD));
             fr.text(hx + 14, 16, wpx - 24, 12.0, GOLD, &format!("⭡ {note} — click"), false);
-            fr.hits.push(Hit { rect: (hx, 9, wpx, 28), action: "update".into() });
+            fr.hits.push(Hit { rect: (hx, 9, wpx.max(0) as u32, 28), action: "update".into() });
         }
         hx -= 46;
         let dark = theme.name == ThemeName::Dark;
@@ -894,7 +894,7 @@ impl Handler {
             Err(_) => return,
         };
         let data = pix.data();
-        for (dst, src) in buf.pixels_mut().iter_mut().zip(data.chunks_exact(4)) {
+        for (dst, src) in (&mut *buf).iter_mut().zip(data.chunks_exact(4)) {
             *dst = ((src[0] as u32) << 16) | ((src[1] as u32) << 8) | src[2] as u32;
         }
         let _ = buf.present();

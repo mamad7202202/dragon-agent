@@ -791,7 +791,7 @@ impl Handler {
         // right chips row
         let mut hx = W - 16;
         if let Some(note) = self.model.update_note.clone() {
-            let wpx = (note.chars().count() as u32 * 9 + 40).min(340);
+            let wpx = ((note.chars().count() as i32 * 9 + 40).min(340)) as i32;
             hx -= wpx as i32 + 8;
             fr.rounded(hx, 9, wpx, 27, 999.0, Frame::rgba(GOLD, 0.14));
             fr.outline(hx, 9, wpx, 27, 999.0, 1.2, Frame::rgb(GOLD));
@@ -856,13 +856,13 @@ impl Handler {
             Tab::Settings => self.paint_settings(&mut fr, cx, hy + 44, cw, H),
             Tab::About => {
                 let cy = H / 3;
-                let tw = "DRAGON AGENT".len() as u32 * 20;
-                fr.text((W - tw as i32) / 2, cy, u32::MAX, 36.0, EMBER, "DRAGON AGENT", true);
-                fr.text((W - tw as i32) / 2, cy + 50, u32::MAX, 14.0, theme.ash, "a fast AI agent with a long memory", false);
+                let tw = ("DRAGON AGENT".len() as i32) * 20;
+                fr.text((W - tw as i32) / 2, cy, i32::MAX / 2, 36.0, EMBER, "DRAGON AGENT", true);
+                fr.text((W - tw as i32) / 2, cy + 50, i32::MAX / 2, 14.0, theme.ash, "a fast AI agent with a long memory", false);
                 fr.text(
                     (W - tw as i32) / 2,
                     cy + 96,
-                    u32::MAX,
+                    i32::MAX / 2,
                     12.0,
                     theme.line,
                     &format!("v{} · MIT · dgpui (pure rust)", dragon_core::VERSION),
@@ -872,7 +872,7 @@ impl Handler {
         }
 
         if let Some((msg, ttl)) = &mut self.model.toast {
-            let wpx = (msg.chars().count() as u32 * 9 + 40).min(W as u32 - 80);
+            let wpx = ((msg.chars().count() as i32 * 9 + 40).min(W - 80)) as i32;
             let x = (W - wpx as i32) / 2;
             fr.rounded(x, H - 58, wpx, 34, 10.0, Frame::rgb(theme.panel2));
             fr.outline(x, H - 58, wpx, 34, 10.0, 1.2, Frame::rgb(GOLD));
@@ -894,7 +894,7 @@ impl Handler {
             Err(_) => return,
         };
         let data = pix.data();
-        for (dst, src) in buf.as_mut_slice().iter_mut().zip(data.chunks_exact(4)) {
+        for (dst, src) in buf.pixels_mut().iter_mut().zip(data.chunks_exact(4)) {
             *dst = ((src[0] as u32) << 16) | ((src[1] as u32) << 8) | src[2] as u32;
         }
         let _ = buf.present();

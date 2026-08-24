@@ -85,18 +85,36 @@ impl<'a> Frame<'a> {
     }
 
     pub fn rect(&mut self, x: i32, y: i32, w: u32, h: u32, color: tiny_skia::Color) {
-        let r = tiny_skia::Rect::from_xywh(x as f32, y as f32, w as f32, h as f32).unwrap();
-        self.pix
-            .fill_rect(r, &tiny_skia::Paint::default().set_shader(tiny_skia::Shader::SolidColor(color)), tiny_skia::FillRule::Winding, None);
+        let Some(r) = tiny_skia::Rect::from_xywh(x as f32, y as f32, w as f32, h as f32) else { return };
+        let mut paint = tiny_skia::Paint::default();
+        paint.shader = tiny_skia::Shader::SolidColor(color);
+        if let Some(path) = tiny_skia::PathBuilder::from_rect(r) {
+            self.pix.fill_path(&path, &paint, tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
+        }
+    }
+
+    /// Rounded-rect path via quadratic corners (portable across tiny-skia versions).
+    fn rr(b: &mut tiny_skia::PathBuilder, x: f32, y: f32, w: f32, h: f32, r0: f32) {
+        let r = r0.min(w / 2.0).min(h / 2.0);
+        b.move_to(x + r, y);
+        b.line_to(x + w - r, y);
+        b.quad_to(x + w, y, x + w, y + r);
+        b.line_to(x + w, y + h - r);
+        b.quad_to(x + w, y + h, x + w - r, y + h);
+        b.line_to(x + r, y + h);
+        b.quad_to(x, y + h, x, y + h - r);
+        b.line_to(x, y + r);
+        b.quad_to(x, y, x + r, y);
+        b.close();
     }
 
     pub fn rounded(&mut self, x: i32, y: i32, w: u32, h: u32, radius: f32, color: tiny_skia::Color) {
-        let Some(r) = tiny_skia::Rect::from_xywh(x as f32, y as f32, w as f32, h as f32) else { return };
+        let mut pb = tiny_skia::PathBuilder::new();
+        Self::rr(&mut pb, x as f32, y as f32, w as f32, h as f32, radius);
+        let Some(path) = pb.finish() else { return };
         let mut paint = tiny_skia::Paint::default();
-        paint.set_shader(tiny_skia::Shader::SolidColor(color));
-        if let Some(path) = tiny_skia::PathBuilder::from_rect(r, tiny_skia::Rounding::new(radius, radius)) {
-            self.pix.fill_path(&path, &paint, tiny_skia::FillRule::Winding, None);
-        }
+        paint.shader = tiny_skia::Shader::SolidColor(color);
+        self.pix.fill_path(&path, &paint, tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
     }
 
     pub fn gradient_rounded(
@@ -109,7 +127,9 @@ impl<'a> Frame<'a> {
         from: [u8; 3],
         to: [u8; 3],
     ) {
-        let Some(r) = tiny_skia::Rect::from_xywh(x as f32, y as f32, w as f32, h as f32) else { return };
+        let mut pb = tiny_skia::PathBuilder::new();
+        Self::rr(&mut pb, x as f32, y as f32, w as f32, h as f32, radius);
+        let Some(path) = pb.finish() else { return };
         let shader = tiny_skia::LinearGradient::new(
             tiny_skia::Point { x: x as f32, y: y as f32 },
             tiny_skia::Point { x: (x + w as i32) as f32, y: (y + h as i32) as f32 },
@@ -122,40 +142,17 @@ impl<'a> Frame<'a> {
         );
         let mut paint = tiny_skia::Paint::default();
         paint.shader = shader.unwrap_or_else(|| tiny_skia::Shader::SolidColor(Self::rgb(from)));
-        if let Some(p) = tiny_skia::PathBuilder::from_rect(r, tiny_skia::Rounding::new(radius, radius)) {
-            self.pix.fill_path(&p, &paint, tiny_skia::FillRule::Winding, None);
-        }
+        self.pix.fill_path(&path, &paint, tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
     }
 
     pub fn outline(&mut self, x: i32, y: i32, w: u32, h: u32, radius: f32, width: f32, color: tiny_skia::Color) {
-        let Some(r) = tiny_skia::Rect::from_xywh(x as f32, y as f32, w as f32, h as f32) else { return };
-        let hw = width / 2.0;
-        let Some(outer) = tiny_skia::PathBuilder::from_rect(
-            r.inflate(hw, hw),
-            tiny_skia::Rounding::new(radius + hw, radius + hw),
-        ) else { return };
-        let inner_w = w as f32 - width;
-        let inner_h = h as f32 - width;
-        if inner_w <= 0.0 || inner_h <= 0.0 { return; }
-        let Some(inner) = tiny_skia::PathBuilder::from_rect(
-            tiny_skia::Rect::from_xywh(
-                x as f32 + width / 2.0,
-                y as f32 + width / 2.0,
-                inner_w,
-                inner_h,
-            )
-            .unwrap()
-            .inflate(-hw, -hw),
-            tiny_skia::Rounding::new((radius - width / 2.0).max(0.0), (radius - width / 2.0).max(0.0)),
-        ) else { return };
         let mut pb = tiny_skia::PathBuilder::new();
-        pb.push_path(outer);
-        pb.push_path(inner);
-        if let Some(path) = pb.finish() {
-            let mut paint = tiny_skia::Paint::default();
-            paint.set_shader(tiny_skia::Shader::SolidColor(color));
-            self.pix.fill_path(&path, &paint, tiny_skia::FillRule::EvenOdd, None);
-        }
+        Self::rr(&mut pb, x as f32, y as f32, w as f32, h as f32, radius);
+        let Some(path) = pb.finish() else { return };
+        let mut paint = tiny_skia::Paint::default();
+        paint.shader = tiny_skia::Shader::SolidColor(color);
+        let stroke = tiny_skia::Stroke { width, ..tiny_skia::Stroke::default() };
+        self.pix.stroke_path(&path, &paint, &stroke, tiny_skia::Transform::identity(), None);
     }
 
     /// Soft vertical shadow rising from `y` upward by `h` px.

@@ -405,7 +405,7 @@ impl ApplicationHandler for Handler {
         });
     }
 
-    fn about_to_wait(&mut self) {
+    fn about_to_wait(&mut self, _el: &ActiveEventLoop) {
         if let Some(w) = &self.win {
             if self.model.busy || self.rx.try_recv().is_ok() {
                 w.window.request_redraw();
@@ -413,7 +413,7 @@ impl ApplicationHandler for Handler {
         }
     }
 
-    fn window_event(&mut self, el: &ActiveEventLoop, _id: Window::id_type(), ev: WindowEvent) {
+    fn window_event(&mut self, el: &ActiveEventLoop, _id: winit::window::WindowId, ev: WindowEvent) {
         // drain events
         loop {
             match self.rx.try_recv() {
@@ -1188,7 +1188,8 @@ fn main() -> Result<()> {
     });
 
     // pre-flight update gate in terminal before opening any window
-    let update_note = match dragon_core::update::check(dragon_core::VERSION).await {
+    let gate = rt.block_on(async { dragon_core::update::check(dragon_core::VERSION).await });
+    let update_note = match gate {
         Ok(Some(u)) => {
             println!(
                 "\n\x1b[38;2;255;205;112m⭡ update available\x1b[0m  v{} → {}\nrelease: {}\n[o] open download & exit   [enter] continue\n> ",

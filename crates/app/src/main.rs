@@ -421,16 +421,13 @@ impl ApplicationHandler for Handler {
                 Err(_) => break,
             }
         }
-        let Some(wst) = self.win.as_ref() else { return };
-        let (ww, wh) = (wst.width, wst.height);
-        let warc = wst.window.clone();
-        drop(wst);
+        let warc = self.win.as_ref().map(|w| w.window.clone());
 
         match ev {
             WindowEvent::Resized(s) => {
                 win.width = s.width.max(1);
                 win.height = s.height.max(1);
-                warc.request_redraw();
+                if let Some(w) = &warc { w.request_redraw(); }
             }
             WindowEvent::CloseRequested => el.exit(),
             WindowEvent::CursorMoved { position, .. } => {
@@ -443,26 +440,28 @@ impl ApplicationHandler for Handler {
                 };
                 if self.model.tab == Tab::Chat {
                     self.model.scroll = (self.model.scroll + dy).max(0);
-                    warc.request_redraw();
+                    if let Some(w) = &warc { w.request_redraw(); }
                 }
             }
             WindowEvent::MouseInput { state: ElementState::Pressed, button: MouseButton::Left, .. } => {
                 let hit = self.hits.iter().rev().find(|h| inside(h.rect, self.mouse.0, self.mouse.1)).cloned();
                 if let Some(h) = hit {
                     self.dispatch(&h.action);
-                    warc.request_redraw();
+                    if let Some(w) = &warc { w.request_redraw(); }
                 }
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 if event.state == ElementState::Pressed {
                     self.key(event);
-                    warc.request_redraw();
+                    if let Some(w) = &warc { w.request_redraw(); }
                 }
             }
             WindowEvent::RedrawRequested => {
-                if let Some(w) = &mut self.win {
+                let mut w = self.win.take();
+                if let Some(w) = &mut w {
                     self.paint(w);
                 }
+                self.win = w;
             }
             _ => {}
         }
@@ -679,7 +678,7 @@ impl Handler {
             }
             return;
         }
-        let ctrl = event.modifiers_state().control_key();
+        let ctrl = event.modifiers.control_key();
         if ctrl {
             match lkey.as_str() {
                 "n" => return self.dispatch("sess-new"),
@@ -881,11 +880,11 @@ impl Handler {
             Err(_) => return,
         };
         let data = pix.data();
-        for (dst, src) in buf.pixels_mut().iter_mut().zip(data.chunks_exact(4)) {
+        for (dst, src) in buf.as_mut_slice().iter_mut().zip(data.chunks_exact(4)) {
             *dst = ((src[0] as u32) << 16) | ((src[1] as u32) << 8) | src[2] as u32;
         }
         let _ = buf.present();
-        warc.request_redraw();
+        if let Some(w) = &warc { w.request_redraw(); }
     }
 
     fn paint_chat(&mut self, fr: &mut Frame, x: i32, y: i32, w: u32, H: i32) {

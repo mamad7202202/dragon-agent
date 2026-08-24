@@ -88,9 +88,8 @@ impl<'a> Frame<'a> {
         let Some(r) = tiny_skia::Rect::from_xywh(x as f32, y as f32, w as f32, h as f32) else { return };
         let mut paint = tiny_skia::Paint::default();
         paint.shader = tiny_skia::Shader::SolidColor(color);
-        if let Some(path) = tiny_skia::PathBuilder::from_rect(r) {
-            self.pix.fill_path(&path, &paint, tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
-        }
+        let path = tiny_skia::PathBuilder::from_rect(r);
+        self.pix.fill_path(&path, &paint, tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
     }
 
     /// Rounded-rect path via quadratic corners (portable across tiny-skia versions).
@@ -185,20 +184,20 @@ impl<'a> Frame<'a> {
         if s.is_empty() || max_w == 0 {
             return 0;
         }
-        let metrics = Metrics::new(size, size * 1.42);
+        let metrics = cosmic_text::Metrics::new(size, size * 1.42);
         let mut buffer = cosmic_text::Buffer::new(self.font, metrics);
         buffer.set_size(Some(max_w as f32), None);
         let attrs = cosmic_text::Attrs::new()
             .family(cosmic_text::Family::SansSerif)
             .weight(if bold { cosmic_text::Weight::BOLD } else { cosmic_text::Weight::NORMAL });
-        buffer.set_text(self.font, s, attrs, cosmic_text::Shaping::Advanced);
+        buffer.set_text(self.font, s, attrs);
         buffer.shape_until_scroll(self.font, false);
 
         let fg = tiny_skia::ColorU8::from_rgba(color[0], color[1], color[2], 255).premultiply();
         let _ = fg;
         // Split borrows so the draw closure can mutate pixels.
         let Self { pix, font, swash, .. } = self;
-        buffer.draw(font, swash, x as f32, y as f32, |px, py, pw, ph, col| {
+        buffer.draw(font, swash, cosmic_text::Color::rgba(color[0], color[1], color[2], 255), |px, py, pw, ph, col| {
             let alpha = col.a();
             if alpha == 0 {
                 return;
@@ -210,7 +209,7 @@ impl<'a> Frame<'a> {
                     if gx < 0 || gy < 0 {
                         continue;
                     }
-                    let idx = (gy as usize * pix.width() + gx as usize) * 4;
+                    let idx = (gy as usize * pix.width() as usize + gx as usize) * 4;
                     if idx + 3 >= pix.data().len() {
                         continue;
                     }
@@ -239,13 +238,13 @@ impl<'a> Frame<'a> {
         if s.is_empty() || max_w == 0 {
             return 0;
         }
-        let metrics = Metrics::new(size, size * 1.42);
+        let metrics = cosmic_text::Metrics::new(size, size * 1.42);
         let mut buffer = cosmic_text::Buffer::new(self.font, metrics);
         buffer.set_size(Some(max_w as f32), None);
         let attrs = cosmic_text::Attrs::new()
             .family(cosmic_text::Family::SansSerif)
             .weight(if bold { cosmic_text::Weight::BOLD } else { cosmic_text::Weight::NORMAL });
-        buffer.set_text(self.font, s, attrs, cosmic_text::Shaping::Advanced);
+        buffer.set_text(self.font, s, attrs);
         buffer.shape_until_scroll(self.font, false);
         buffer.layout_runs().map(|r| r.line_height as i32).sum::<i32>().max(size as i32)
     }
@@ -259,9 +258,9 @@ impl<'a> Frame<'a> {
             self.gradient_rounded(x, y, w, h, 11.0, EMBER, FLAME);
             self.text(x + 17, y + 10, w - 20, 14.5, [20, 18, 22], label, true);
         } else {
-            self.rounded(x, y, w, h, 11.0, Self::rgba(self.panel2, 0.95));
-            self.outline(x, y, w, h, 11.0, 1.4, Self::rgb(self.line));
-            self.text(x + 17, y + 10, w - 20, 14.0, self.ash, label, false);
+            self.rounded(x, y, w, h, 11.0, Self::rgba(self.theme.panel2, 0.95));
+            self.outline(x, y, w, h, 11.0, 1.4, Self::rgb(self.theme.line));
+            self.text(x + 17, y + 10, w - 20, 14.0, self.theme.ash, label, false);
         }
         self.hits.push(Hit { rect: (x, y, w, h), action: action.to_string() });
         h
@@ -274,12 +273,12 @@ impl<'a> Frame<'a> {
             self.gradient_rounded(x, y, w, h, 999.0, EMBER, FLAME);
             self.text(x + 15, y + 7, w, 13.0, [20, 18, 22], label, true);
         } else {
-            self.rounded(x, y, w, h, 999.0, Self::rgba(self.panel2, 0.9));
-            self.outline(x, y, w, h, 999.0, 1.2, Self::rgb(self.line));
-            self.text(x + 15, y + 7, w, 13.0, self.ash, label, false);
+            self.rounded(x, y, w, h, 999.0, Self::rgba(self.theme.panel2, 0.9));
+            self.outline(x, y, w, h, 999.0, 1.2, Self::rgb(self.theme.line));
+            self.text(x + 15, y + 7, w, 13.0, self.theme.ash, label, false);
         }
         self.hits.push(Hit { rect: (x, y, w, h), action: action.to_string() });
-        w
+        w as i32
     }
 
     /// Single-line editor. Returns height. Registers hit for focus.
@@ -295,17 +294,17 @@ impl<'a> Frame<'a> {
         caret: usize,
     ) -> i32 {
         let h = 40;
-        self.rounded(x, y, w, h, 11.0, Self::rgba(self.panel2, 0.95));
+        self.rounded(x, y, w, h, 11.0, Self::rgba(self.theme.panel2, 0.95));
         self.outline(
             x, y, w, h, 11.0,
             if focused { 1.8 } else { 1.2 },
-            if focused { Self::rgb(EMBER) } else { Self::rgb(self.line) },
+            if focused { Self::rgb(EMBER) } else { Self::rgb(self.theme.line) },
         );
         let shown = if value.is_empty() && !focused { hint.to_string() } else { String::new() };
         if !shown.is_empty() {
             self.text(x + 13, y + 12, w - 20, 13.5, self.scale_hint(), &shown, false);
         } else {
-            self.text(x + 13, y + 12, w - 20, 13.5, self.bone, value, false);
+            self.text(x + 13, y + 12, w - 20, 13.5, self.theme.bone, value, false);
             if focused {
                 let before: String = value.chars().take(caret).collect();
                 let cw = 7 + before.chars().count() as i32 * 8;
@@ -317,17 +316,17 @@ impl<'a> Frame<'a> {
     }
 
     pub fn scale_hint(&self) -> [u8; 3] {
-        [self.ash[0] - 20, self.ash[1] - 20, self.ash[2] - 20]
+        [self.theme.ash[0] - 20, self.theme.ash[1] - 20, self.theme.ash[2] - 20]
     }
 
     pub fn checkbox(&mut self, x: i32, y: i32, checked: bool, label: &str, action: &str) -> i32 {
-        self.rounded(x, y + 2, 18, 18, 5.0, if checked { Self::rgb(EMBER) } else { Self::rgb(self.panel2) });
-        self.outline(x, y + 2, 18, 18, 5.0, 1.3, Self::rgb(self.line));
+        self.rounded(x, y + 2, 18, 18, 5.0, if checked { Self::rgb(EMBER) } else { Self::rgb(self.theme.panel2) });
+        self.outline(x, y + 2, 18, 18, 5.0, 1.3, Self::rgb(self.theme.line));
         if checked {
             self.text(x + 4, y + 3, 14, 12.5, [255, 255, 255], "✓", true);
         }
         let tw = self.measure(u32::MAX, 13.0, label, false);
-        self.text(x + 26, y + 5, u32::MAX, 13.0, self.bone, label, false);
+        self.text(x + 26, y + 5, u32::MAX, 13.0, self.theme.bone, label, false);
         self.hits.push(Hit { rect: (x, y, 26 + tw as u32, 24), action: action.to_string() });
         h_row()
     }

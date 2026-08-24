@@ -421,13 +421,16 @@ impl ApplicationHandler for Handler {
                 Err(_) => break,
             }
         }
-        let Some(win) = &mut self.win else { return };
+        let Some(wst) = self.win.as_ref() else { return };
+        let (ww, wh) = (wst.width, wst.height);
+        let warc = wst.window.clone();
+        drop(wst);
 
         match ev {
             WindowEvent::Resized(s) => {
                 win.width = s.width.max(1);
                 win.height = s.height.max(1);
-                win.window.request_redraw();
+                warc.request_redraw();
             }
             WindowEvent::CloseRequested => el.exit(),
             WindowEvent::CursorMoved { position, .. } => {
@@ -440,23 +443,27 @@ impl ApplicationHandler for Handler {
                 };
                 if self.model.tab == Tab::Chat {
                     self.model.scroll = (self.model.scroll + dy).max(0);
-                    win.window.request_redraw();
+                    warc.request_redraw();
                 }
             }
             WindowEvent::MouseInput { state: ElementState::Pressed, button: MouseButton::Left, .. } => {
                 let hit = self.hits.iter().rev().find(|h| inside(h.rect, self.mouse.0, self.mouse.1)).cloned();
                 if let Some(h) = hit {
                     self.dispatch(&h.action);
-                    win.window.request_redraw();
+                    warc.request_redraw();
                 }
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 if event.state == ElementState::Pressed {
                     self.key(event);
-                    win.window.request_redraw();
+                    warc.request_redraw();
                 }
             }
-            WindowEvent::RedrawRequested => self.paint(win),
+            WindowEvent::RedrawRequested => {
+                if let Some(w) = &mut self.win {
+                    self.paint(w);
+                }
+            }
             _ => {}
         }
     }
@@ -878,7 +885,7 @@ impl Handler {
             *dst = ((src[0] as u32) << 16) | ((src[1] as u32) << 8) | src[2] as u32;
         }
         let _ = buf.present();
-        win.window.request_redraw();
+        warc.request_redraw();
     }
 
     fn paint_chat(&mut self, fr: &mut Frame, x: i32, y: i32, w: u32, H: i32) {

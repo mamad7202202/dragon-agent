@@ -425,8 +425,10 @@ impl ApplicationHandler for Handler {
 
         match ev {
             WindowEvent::Resized(s) => {
-                win.width = s.width.max(1);
-                win.height = s.height.max(1);
+                if let Some(w) = &mut self.win {
+                    w.width = s.width.max(1);
+                    w.height = s.height.max(1);
+                }
                 if let Some(w) = &warc { w.request_redraw(); }
             }
             WindowEvent::CloseRequested => el.exit(),
@@ -476,7 +478,7 @@ impl Handler {
         let cmd = it.next().unwrap_or("").to_string();
         let arg = it.collect::<Vec<&str>>().join(":");
         match cmd {
-            "quit" => el_exit(),
+            "quit" => std::process::exit(0),
             "tab" => {
                 self.model.tab = match arg.as_str() {
                     "chat" => Tab::Chat,
@@ -643,36 +645,28 @@ impl Handler {
         if let Some(w) = &self.win {
             w.window.request_redraw();
         }
-
-        fn el_exit() {
-            std::process::exit(0);
-        }
-        #[allow(dead_code)]
-        fn _unused(_: ()) {}
-        let _ = arg;
-        // helper defined above via nested fn trick to avoid borrow issues
-        fn custom_idx(idx: usize) -> bool {
-            idx >= presets::PRESETS.len()
-        }
-        let _ = custom_idx;
     }
 
     fn key(&mut self, event: winit::event::KeyEvent) {
+        use winit::keyboard::{Key as LKey, NamedKey};
         if event.state != ElementState::Pressed {
             return;
         }
-        let lkey = event.logical_key.as_ref().to_string();
 
         if self.model.pending.is_some() {
-            match lkey.as_str() {
-                "y" | "Y" => return self.dispatch("approve-y"),
-                "a" | "A" => return self.dispatch("approve-a"),
-                "n" | "N" => return self.dispatch("approve-n"),
-                "d" | "D" => return self.dispatch("approval-why"),
+            match &event.logical_key {
+                LKey::Character(c) => match c.as_str() {
+                    "y" | "Y" => return self.dispatch("approve-y"),
+                    "a" | "A" => return self.dispatch("approve-a"),
+                    "n" | "N" => return self.dispatch("approve-n"),
+                    "d" | "D" => return self.dispatch("approval-why"),
+                    _ => {}
+                },
                 _ => {}
             }
         }
-        if lkey == "Escape" {
+        let named = |k: NamedKey| matches!(&event.logical_key, LKey::Named(n) if *n == k);
+        if named(NamedKey::Escape) {
             if self.model.busy {
                 self.model.stop();
             }
@@ -680,70 +674,82 @@ impl Handler {
         }
         let ctrl = event.modifiers.control_key();
         if ctrl {
-            match lkey.as_str() {
-                "n" => return self.dispatch("sess-new"),
-                "s" => return self.dispatch("sess-list"),
-                "m" => {
-                    let next = match self.model.mode {
-                        Mode::Agent => Mode::Plan,
-                        Mode::Plan => Mode::Chat,
-                        Mode::Chat => Mode::Agent,
-                    };
-                    self.model.mode = next;
-                    if let Some(ag) = &self.model.agent {
-                        if let Ok(mut g) = ag.try_lock() {
-                            g.set_mode(next);
-                        }
+            match &event.logical_key {
+                LKey::Character(c) => match c.as_str() {
+                    "n" => return self.dispatch("sess-new"),
+                    "s" => return self.dispatch("sess-list"),
+                    "d" => return self.dispatch("theme"),
+                    "," => {
+                        self.model.tab = Tab::Settings;
+                        return;
                     }
-                    return;
-                }
-                "d" => return self.dispatch("theme"),
-                "," => {
-                    self.model.tab = Tab::Settings;
-                    return;
-                }
+                    "m" => {
+                        let next = match self.model.mode {
+                            Mode::Agent => Mode::Plan,
+                            Mode::Plan => Mode::Chat,
+                            Mode::Chat => Mode::Agent,
+                        };
+                        self.model.mode = next;
+                        if let Some(ag) = &self.model.agent {
+                            if let Ok(mut g) = ag.try_lock() {
+                                g.set_mode(next);
+                            }
+                        }
+                        return;
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
         }
         let focus_is_draft = self.model.focus.as_deref() == Some("draft");
-        if lkey == "Enter" && !ctrl {
+        if named(NamedKey::Enter) {
             if focus_is_draft {
                 return self.dispatch("send");
             }
             return;
         }
-        if lkey == "?" && !focus_is_draft {
-            // cheat sheet quick line
-            self.model.items.push(Item::System(
-                "shortcuts: Ctrl+N new · Ctrl+S sessions · Ctrl+M mode · Ctrl+D theme · Esc stop".into(),
-            ));
-            return;
-        }
 
         let target = self.model.focus.clone().unwrap_or_default();
-        let field = match target.as_str() {
-            "draft" => &mut self.model.draft,
-            "f_name" => &mut self.model.f_name,
-            "f_url" => &mut self.model.f_url,
-            "f_key" => &mut self.model.f_key,
-            "f_models" => &mut self.model.f_models,
-            _ => return,
-        };
-        match lkey.as_str() {
-            "Backspace" => field.back(),
-            "ArrowLeft" => field.caret = field.caret.saturating_sub(1),
-            "ArrowRight" => field.caret = (field.caret + 1).min(field.value.chars().count()),
-            "Home" => field.caret = 0,
-            "End" => field.caret = field.value.chars().count(),
-            "Space" => field.insert(' '),
-            "Tab" => {}
-            other => {
-                if !ctrl {
-                    if let Some(ch) = strip_char(other) {
-                        field.insert(ch);
-                    }
+        // special keys first
+        match &event.logical_key {
+            LKey::Named(k) => {
+                let field = match target.as_str() {
+                    "draft" => &mut self.model.draft,
+                    "f_name" => &mut self.model.f_name,
+                    "f_url" => &mut self.model.f_url,
+                    "f_key" => &mut self.model.f_key,
+                    "f_models" => &mut self.model.f_models,
+                    _ => return,
+                };
+                match k {
+                    NamedKey::Backspace => field.back(),
+                    NamedKey::ArrowLeft => field.caret = field.caret.saturating_sub(1),
+                    NamedKey::ArrowRight => field.caret = (field.caret + 1).min(field.value.chars().count()),
+                    NamedKey::Home => field.caret = 0,
+                    NamedKey::End => field.caret = field.value.chars().count(),
+                    NamedKey::Space => field.insert(' '),
+                    _ => {}
+                }
+                return;
+            }
+            LKey::Character(c) => {
+                if ctrl {
+                    return;
+                }
+                let field = match target.as_str() {
+                    "draft" => &mut self.model.draft,
+                    "f_name" => &mut self.model.f_name,
+                    "f_url" => &mut self.model.f_url,
+                    "f_key" => &mut self.model.f_key,
+                    "f_models" => &mut self.model.f_models,
+                    _ => return,
+                };
+                for ch in c.chars() {
+                    field.insert(ch);
                 }
             }
+            _ => {}
         }
     }
 
@@ -863,7 +869,7 @@ impl Handler {
             fr.rounded(x, H - 58, wpx, 34, 10.0, Frame::rgb(theme.panel2));
             fr.outline(x, H - 58, wpx, 34, 10.0, 1.2, Frame::rgb(GOLD));
             fr.text(x + 20, H - 49, wpx - 30, 13.0, GOLD, msg, false);
-            ttl -= 0.02;
+            *ttl -= 0.02;
             if *ttl <= 0.0 {
                 self.model.toast = None;
             }

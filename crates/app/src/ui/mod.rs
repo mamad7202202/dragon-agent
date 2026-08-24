@@ -302,7 +302,7 @@ impl<'a> Frame<'a> {
         );
         let shown = if value.is_empty() && !focused { hint.to_string() } else { String::new() };
         if !shown.is_empty() {
-            self.text(x + 13, y + 12, w - 20, 13.5, self.scale_hint(), &shown, false);
+            self.text(x + 13, y + 12, w - 20, 13.5, self.theme.scale_hint(), &shown, false);
         } else {
             self.text(x + 13, y + 12, w - 20, 13.5, self.theme.bone, value, false);
             if focused {

@@ -186,7 +186,7 @@ impl<'a> Frame<'a> {
         }
         let metrics = cosmic_text::Metrics::new(size, size * 1.42);
         let mut buffer = cosmic_text::Buffer::new(self.font, metrics);
-        buffer.set_size(Some(max_w as f32), None);
+        buffer.set_size(self.font, Some(max_w as f32), None);
         let attrs = cosmic_text::Attrs::new()
             .family(cosmic_text::Family::SansSerif)
             .weight(if bold { cosmic_text::Weight::BOLD } else { cosmic_text::Weight::NORMAL });
@@ -204,8 +204,8 @@ impl<'a> Frame<'a> {
             }
             for dy in 0..ph {
                 for dx in 0..pw {
-                    let gx = px + dx;
-                    let gy = py + dy;
+                    let gx = px + dx + x;
+                    let gy = py + dy + y;
                     if gx < 0 || gy < 0 {
                         continue;
                     }
@@ -240,7 +240,7 @@ impl<'a> Frame<'a> {
         }
         let metrics = cosmic_text::Metrics::new(size, size * 1.42);
         let mut buffer = cosmic_text::Buffer::new(self.font, metrics);
-        buffer.set_size(Some(max_w as f32), None);
+        buffer.set_size(self.font, Some(max_w as f32), None);
         let attrs = cosmic_text::Attrs::new()
             .family(cosmic_text::Family::SansSerif)
             .weight(if bold { cosmic_text::Weight::BOLD } else { cosmic_text::Weight::NORMAL });

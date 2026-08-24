@@ -474,8 +474,8 @@ static EXPLAIN: Mutex<Option<String>> = Mutex::new(None);
 impl Handler {
     fn dispatch(&mut self, action: &str) {
         let mut it = action.split(':');
-        let cmd = it.next().unwrap_or("");
-        let arg = it.rest().join(":");
+        let cmd = it.next().unwrap_or("").to_string();
+        let arg = it.collect::<Vec<&str>>().join(":");
         match cmd {
             "quit" => el_exit(),
             "tab" => {

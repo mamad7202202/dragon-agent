@@ -16,9 +16,10 @@ pub const MAX_BULLET_CHARS: usize = 160;
 pub const MAX_SECTIONS: usize = 16;
 
 /// What kind of knowledge a bullet carries (drives colouring + ranking).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
+    #[default]
     Fact,
     Decision,
     Task,
@@ -221,9 +222,7 @@ impl GraphStore {
 
     /// Reinforce a bullet (called when retrieval proves it useful).
     pub fn reinforce(&mut self, session: Option<&str>, section_id: &str, contains: &str) {
-        let buckets: Vec<&mut Vec<Section>> =
-            vec![&mut self.global, self.bucket_mut(session)];
-        for bucket in buckets {
+        let mut bump = |bucket: &mut Vec<Section>| {
             for s in bucket.iter_mut() {
                 if s.id != section_id {
                     continue;
@@ -234,7 +233,9 @@ impl GraphStore {
                     }
                 }
             }
-        }
+        };
+        bump(&mut self.global);
+        bump(self.bucket_mut(session));
     }
 
     /// Compact prompt block: active first, then cooling, capped hard.

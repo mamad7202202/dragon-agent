@@ -307,7 +307,7 @@ pub async fn execute(name: &str, arguments: &str, ctx: &ToolCtx) -> Result<Strin
             let texts = args.get("bullets").and_then(|b| b.as_array()).cloned().unwrap_or_default();
             let kinds = args.get("kinds").and_then(|b| b.as_array()).cloned().unwrap_or_default();
             let confs = args.get("confidence").and_then(|b| b.as_array()).cloned().unwrap_or_default();
-            use dragon_core::memory::graph::Kind as GKind;
+            use crate::memory::graph::Kind as GKind;
             let mut triples: Vec<(String, GKind, f32)> = Vec::new();
             for (i, t) in texts.iter().enumerate() {
                 let Some(text) = t.as_str() else { continue };

@@ -408,7 +408,7 @@ impl ApplicationHandler for Handler {
 
     fn about_to_wait(&mut self, _el: &ActiveEventLoop) {
         if let Some(w) = &self.win {
-            if self.model.busy || self.rx.try_recv().is_ok() {
+            if self.model.busy || self.rx.len() > 0 {
                 w.window.request_redraw();
             }
         }

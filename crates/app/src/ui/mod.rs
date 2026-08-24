@@ -113,9 +113,8 @@ impl<'a> Frame<'a> {
         let Some(r) = tiny_skia::Rect::from_xywh(x as f32, y as f32, w as f32, h as f32) else { return };
         let mut paint = tiny_skia::Paint::default();
         paint.shader = tiny_skia::Shader::SolidColor(color);
-        if let Some(p) = tiny_skia::PathBuilder::from_rect(r) {
-            self.pix.fill_path(&p, &paint, tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
-        }
+        let p = tiny_skia::PathBuilder::from_rect(r);
+        self.pix.fill_path(&p, &paint, tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
     }
 
     pub fn rounded(&mut self, x: i32, y: i32, w: i32, h: i32, radius: f32, color: tiny_skia::Color) {
@@ -236,8 +235,8 @@ impl<'a> Frame<'a> {
             let gy0 = py + y;
             for dy in 0..ph {
                 for dx in 0..pw {
-                    let gx = gx0 + dx;
-                    let gy = gy0 + dy;
+                    let gx = gx0 + dx as i32;
+                    let gy = gy0 + dy as i32;
                     if gx < 0 || gy < 0 {
                         continue;
                     }

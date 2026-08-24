@@ -84,7 +84,7 @@ impl<'a> Frame<'a> {
         self.pix.fill(tiny_skia::Color::from_rgba8(c[0], c[1], c[2], 255));
     }
 
-    pub fn rect(&mut self, x: i32, y: i32, w: u32, h: u32, color: tiny_skia::Color) {
+    pub fn rect(&mut self, x: i32, y: i32, w: i32, h: i32, color: tiny_skia::Color) {
         let Some(r) = tiny_skia::Rect::from_xywh(x as f32, y as f32, w as f32, h as f32) else { return };
         let mut paint = tiny_skia::Paint::default();
         paint.shader = tiny_skia::Shader::SolidColor(color);
@@ -107,7 +107,7 @@ impl<'a> Frame<'a> {
         b.close();
     }
 
-    pub fn rounded(&mut self, x: i32, y: i32, w: u32, h: u32, radius: f32, color: tiny_skia::Color) {
+    pub fn rounded(&mut self, x: i32, y: i32, w: i32, h: i32, radius: f32, color: tiny_skia::Color) {
         let mut pb = tiny_skia::PathBuilder::new();
         Self::rr(&mut pb, x as f32, y as f32, w as f32, h as f32, radius);
         let Some(path) = pb.finish() else { return };
@@ -120,8 +120,8 @@ impl<'a> Frame<'a> {
         &mut self,
         x: i32,
         y: i32,
-        w: u32,
-        h: u32,
+        w: i32,
+        h: i32,
         radius: f32,
         from: [u8; 3],
         to: [u8; 3],
@@ -144,7 +144,7 @@ impl<'a> Frame<'a> {
         self.pix.fill_path(&path, &paint, tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
     }
 
-    pub fn outline(&mut self, x: i32, y: i32, w: u32, h: u32, radius: f32, width: f32, color: tiny_skia::Color) {
+    pub fn outline(&mut self, x: i32, y: i32, w: i32, h: i32, radius: f32, width: f32, color: tiny_skia::Color) {
         let mut pb = tiny_skia::PathBuilder::new();
         Self::rr(&mut pb, x as f32, y as f32, w as f32, h as f32, radius);
         let Some(path) = pb.finish() else { return };
@@ -155,7 +155,7 @@ impl<'a> Frame<'a> {
     }
 
     /// Soft vertical shadow rising from `y` upward by `h` px.
-    pub fn bottom_shadow(&mut self, x: i32, w: u32, y_bottom: i32, h: i32, dark: bool) {
+    pub fn bottom_shadow(&mut self, x: i32, w: i32, y_bottom: i32, h: i32, dark: bool) {
         for i in 0..h.max(1) {
             let t = 1.0 - (i as f32 / h.max(1) as f32);
             let a = (t * t * 0.55 * 255.0) as u8;
@@ -175,22 +175,22 @@ impl<'a> Frame<'a> {
         &mut self,
         x: i32,
         y: i32,
-        max_w: u32,
+        max_w: i32,
         size: f32,
         color: [u8; 3],
         s: &str,
         bold: bool,
     ) -> i32 {
-        if s.is_empty() || max_w == 0 {
+        if s.is_empty() || max_w <= 0 {
             return 0;
         }
         let metrics = cosmic_text::Metrics::new(size, size * 1.42);
         let mut buffer = cosmic_text::Buffer::new(self.font, metrics);
-        buffer.set_size(self.font, Some(max_w as f32), None);
+        buffer.set_size(self.font, Some(max_w.max(0) as f32), None);
         let attrs = cosmic_text::Attrs::new()
             .family(cosmic_text::Family::SansSerif)
             .weight(if bold { cosmic_text::Weight::BOLD } else { cosmic_text::Weight::NORMAL });
-        buffer.set_text(self.font, s, attrs);
+        buffer.set_text(self.font, s, attrs, cosmic_text::Shaping::Advanced);
         buffer.shape_until_scroll(self.font, false);
 
         let fg = tiny_skia::ColorU8::from_rgba(color[0], color[1], color[2], 255).premultiply();
@@ -204,8 +204,8 @@ impl<'a> Frame<'a> {
             }
             for dy in 0..ph {
                 for dx in 0..pw {
-                    let gx = px + dx + x;
-                    let gy = py + dy + y;
+                    let gx = px + dx as i32 + x;
+                    let gy = py + dy as i32 + y;
                     if gx < 0 || gy < 0 {
                         continue;
                     }
@@ -234,17 +234,17 @@ impl<'a> Frame<'a> {
     }
 
     /// Measure wrapped height without drawing.
-    pub fn measure(&mut self, max_w: u32, size: f32, s: &str, bold: bool) -> i32 {
-        if s.is_empty() || max_w == 0 {
+    pub fn measure(&mut self, max_w: i32, size: f32, s: &str, bold: bool) -> i32 {
+        if s.is_empty() || max_w <= 0 {
             return 0;
         }
         let metrics = cosmic_text::Metrics::new(size, size * 1.42);
         let mut buffer = cosmic_text::Buffer::new(self.font, metrics);
-        buffer.set_size(self.font, Some(max_w as f32), None);
+        buffer.set_size(self.font, Some(max_w.max(0) as f32), None);
         let attrs = cosmic_text::Attrs::new()
             .family(cosmic_text::Family::SansSerif)
             .weight(if bold { cosmic_text::Weight::BOLD } else { cosmic_text::Weight::NORMAL });
-        buffer.set_text(self.font, s, attrs);
+        buffer.set_text(self.font, s, attrs, cosmic_text::Shaping::Advanced);
         buffer.shape_until_scroll(self.font, false);
         buffer.layout_runs().map(|r| r.line_height as i32).sum::<i32>().max(size as i32)
     }

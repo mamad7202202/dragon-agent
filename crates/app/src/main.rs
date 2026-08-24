@@ -377,6 +377,7 @@ struct Handler {
     rx: std::sync::mpsc::Receiver<Ev>,
     rt: tokio::runtime::Runtime,
     mouse: (i32, i32),
+    ctrl_held: bool,
     hits: Vec<Hit>,
 }
 
@@ -453,8 +454,15 @@ impl ApplicationHandler for Handler {
                 }
             }
             WindowEvent::KeyboardInput { event, .. } => {
+                if let winit::keyboard::PhysicalKey::Code(code) = event.physical_key {
+                    use winit::keyboard::KeyCode::*;
+                    if matches!(code, ControlLeft | ControlRight) {
+                        self.ctrl_held = event.state == ElementState::Pressed;
+                    }
+                }
                 if event.state == ElementState::Pressed {
-                    self.key(event);
+                    let ctrl = self.ctrl_held;
+                    self.key(event, ctrl);
                     if let Some(w) = &warc { w.request_redraw(); }
                 }
             }
@@ -477,7 +485,7 @@ impl Handler {
         let mut it = action.split(':');
         let cmd = it.next().unwrap_or("").to_string();
         let arg = it.collect::<Vec<&str>>().join(":");
-        match cmd {
+        match cmd.as_str() {
             "quit" => std::process::exit(0),
             "tab" => {
                 self.model.tab = match arg.as_str() {
@@ -647,7 +655,7 @@ impl Handler {
         }
     }
 
-    fn key(&mut self, event: winit::event::KeyEvent) {
+    fn key(&mut self, event: winit::event::KeyEvent, ctrl: bool) {
         use winit::keyboard::{Key as LKey, NamedKey};
         if event.state != ElementState::Pressed {
             return;
@@ -672,7 +680,7 @@ impl Handler {
             }
             return;
         }
-        let ctrl = event.modifiers.control_key();
+
         if ctrl {
             match &event.logical_key {
                 LKey::Character(c) => match c.as_str() {
@@ -805,8 +813,8 @@ impl Handler {
         let rx = 12;
         let ry = 48;
         let rh = H - ry - 12;
-        fr.rounded(rx, ry, 58, rh as u32, 19.0, Frame::rgba(theme.panel, 0.85));
-        fr.outline(rx, ry, 58, rh as u32, 19.0, 1.2, Frame::rgb(theme.line));
+        fr.rounded(rx, ry, 58, rh as i32, 19.0, Frame::rgba(theme.panel, 0.85));
+        fr.outline(rx, ry, 58, rh as i32, 19.0, 1.2, Frame::rgb(theme.line));
         let tabs = [("chat", "CHAT"), ("memory", "MEM"), ("providers", "PROV"), ("settings", "SET"), ("about", "INFO")];
         let mut ty = ry + 42;
         for (id, label) in tabs {
@@ -905,7 +913,7 @@ impl Handler {
             if yy > clip_bottom {
                 break;
             }
-            let hh = self.paint_item(fr, &item, x + pad, iw, yy, clip_bottom);
+            let hh = self.paint_item(fr, &item, x + pad, iw as i32, yy, clip_bottom);
             yy += hh + 14;
         }
         if let Some(s) = &self.model.streaming {
@@ -939,7 +947,7 @@ impl Handler {
         }
     }
 
-    fn paint_item(&mut self, fr: &mut Frame, item: &Item, x: i32, w: u32, y: i32, _clip: i32) -> i32 {
+    fn paint_item(&mut self, fr: &mut Frame, item: &Item, x: i32, w: i32, y: i32, _clip: i32) -> i32 {
         match item {
             Item::User(t) => {
                 let half = w / 2;
@@ -1233,6 +1241,7 @@ fn main() -> Result<()> {
         rx: srx,
         rt,
         mouse: (0, 0),
+        ctrl_held: false,
         hits: Vec::new(),
     };
     handler.model.update_note = update_note.map(|latest| format!("{latest}"));

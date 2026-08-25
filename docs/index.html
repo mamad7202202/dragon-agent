@@ -1,148 +1,290 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dragon Agent — a fast AI agent with a long memory</title>
-<meta name="description" content="Open-source AI agent in Rust. Terminal + desktop, one hybrid memory. Bring your own key: Google AI Studio, OpenRouter, OpenAI, Anthropic and more.">
+<meta name="description" content="Open-source AI agent in Rust. Terminal TUI + native desktop app, one hybrid memory. Bring your own key: Google AI Studio, OpenRouter, OpenAI, Anthropic and more.">
+<script>try{const l=localStorage.getItem("dg-lang");if(l==="fa"){document.documentElement.lang="fa";document.documentElement.dir="rtl"}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Lalezar&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<style>
-.hero{text-align:center;padding:84px 0 64px}
-.hero h1{
-  font-size:clamp(46px,8vw,88px);font-weight:900;letter-spacing:.06em;line-height:1.04;
-  background:linear-gradient(94deg,var(--ember) 8%,var(--flame) 48%,var(--gold) 92%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-}
-.hero .tag{font-size:clamp(17px,2.5vw,22px);font-style:italic;color:var(--bone);margin-top:14px}
-.hero .sub{color:var(--ash);max-width:680px;margin:16px auto 32px;font-size:15.5px}
-.badges{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
-.badge{border:1px solid var(--line);border-radius:999px;padding:6px 15px;font-size:12.5px;color:var(--ash)}
-.badge b{color:var(--bone);font-weight:600}
-
-.feat{transition:.18s}
-.feat:hover{transform:translateY(-3px);border-color:rgba(255,99,71,.35)}
-.feat .ic{font-size:20px;margin-bottom:10px;display:block}
-.feat p{color:var(--ash);font-size:13.8px;margin-top:7px}
-.f-ember{color:var(--ember)}.f-gold{color:var(--gold)}.f-jade{color:var(--jade)}
-.f-sky{color:var(--sky)}.f-violet{color:var(--violet)}.f-flame{color:var(--flame)}
-
-.modes{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
-.mode{flex:1;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:19px}
-.mode h4{font-size:15px;margin-bottom:6px}
-.mode p{color:var(--ash);font-size:13px}
-</style>
 </head>
 <body>
 
 <div class="wrap">
 <nav class="top">
-  <a class="brand" href="index.html"><b>DRAGON</b> <span>AGENT</span></a>
+  <a class="brand" href="index.html">dragon<em>_</em></a>
   <div class="links">
-    <a href="index.html" class="active">home</a>
-    <a href="docs.html">docs</a>
-    <a href="stats.html">live stats</a>
-    <a href="https://github.com/mamad7202202/dragon-agent">github ↗</a>
+    <a href="index.html" data-i="nHome" aria-current="page">home</a>
+    <a href="docs.html" data-i="nDocs">docs</a>
+    <a href="stats.html" data-i="nStats">live stats</a>
+    <a href="https://github.com/mamad7202202/dragon-agent" data-i="nGh">github ↗</a>
+    <button class="lang-btn">فا</button>
   </div>
 </nav>
 
+<!-- ── hero ── -->
 <header class="hero">
-  <h1>DRAGON AGENT</h1>
-  <p class="tag">a fast AI agent with a long memory.</p>
-  <p class="sub">
-    Open-source, written in Rust. A terminal CLI and a glassy desktop app sharing
-    <strong>one core</strong>: hybrid memory that survives sessions, plan / chat / agent modes,
-    permission-gated tools and any model you bring.
-  </p>
-  <div class="cta" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-    <a class="btn primary" href="#install">get started</a>
-    <a class="btn" href="docs.html">read the docs</a>
-    <a class="btn" href="stats.html">live project stats</a>
+  <p class="kicker" data-i="kickHero">open-source · rust · bring-your-own-key</p>
+  <h1 data-i="h1">A fast agent,<br>with <b>a memory that lasts.</b></h1>
+  <p class="sub" data-i="sub">Dragon Agent is an open-source AI agent for your terminal, written in pure Rust. A streaming TUI and a native desktop app share one core — hybrid memory that survives sessions, permission-gated tools, and any model you bring.</p>
+  <div class="cta-row">
+    <a class="btn primary" href="#install" data-i="ctaInstall">get started</a>
+    <a class="btn" href="docs.html" data-i="ctaDocs">read the docs</a>
+    <a class="btn" href="stats.html" data-i="ctaStats">live stats</a>
   </div>
-  <div class="badges">
-    <span class="badge"><b>v0.4.0</b> latest release</span>
-    <span class="badge">rust · zero telemetry</span>
-    <span class="badge">windows · linux · macOS</span>
-    <span class="badge">MIT license</span>
+  <div class="meta-row" data-i="metaRow">
+    <span><b>v0.4.0</b> latest release</span><span>zero telemetry</span><span>windows · linux · macOS</span><span>MIT license</span>
+  </div>
+
+  <div class="term" role="img" aria-label="animated demo of a Dragon Agent terminal session">
+    <div class="term-bar"><span data-i="termTitle">dragon — interactive session</span><span class="dot"><i></i><span data-i="termLive">live demo</span></span></div>
+    <div class="term-body" id="term-body"></div>
   </div>
 </header>
 
-<!-- install -->
+<!-- ── install ── -->
 <section id="install">
-  <div class="kicker">install</div>
-  <h2 class="sec">Two faces, one command away</h2>
-  <p class="lead">Pick the terminal, the desktop — or both. They share config, memory and sessions.</p>
+  <p class="kicker" data-i="kInstall">install</p>
+  <h2 class="sec" data-i="iH2">One command from install, two faces for work.</h2>
+  <p class="lead" data-i="iLead">Pick the terminal, the desktop — or both. They share config, memory and sessions.</p>
 
   <div class="grid g2">
-    <div class="card">
-      <h3 style="font-size:16px">⌨ Terminal CLI <span class="mono" style="color:var(--ash);font-weight:400">· dragon</span></h3>
-      <p style="color:var(--ash);font-size:13.5px;margin:8px 0 12px">Streaming TUI with mouse support, session resume and permission prompts.</p>
-      <div style="font-size:11px;color:var(--ash);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">linux / macOS</div>
-      <pre><button class="copy">copy</button><code>c -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh</code></pre>
-      <div style="font-size:11px;color:var(--ash);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">windows powershell</div>
-      <pre><button class="copy">copy</button><code>irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex</code></pre>
+    <div class="pane">
+      <h3 style="font-size:17px"><span data-i="cliT">Terminal CLI</span> <span class="mono" style="color:var(--ash);font-weight:400;font-size:13px">· dragon</span></h3>
+      <p style="color:var(--ash);font-size:13.8px;margin:8px 0 16px" data-i="cliP">Streaming TUI with mouse support, session resume and permission prompts.</p>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-pane="p-sh" data-i="tabSh">linux / macos</button>
+        <button class="tab" role="tab" aria-selected="false" data-pane="p-ps" data-i="tabPs">windows powershell</button>
+        <button class="tab" role="tab" aria-selected="false" data-pane="p-cg" data-i="tabCargo">cargo</button>
+      </div>
+      <div class="tabpane on" id="p-sh" role="tabpanel">
+        <pre><code id="cmd-sh">curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh</code><button class="copy">copy</button></pre>
+      </div>
+      <div class="tabpane" id="p-ps" role="tabpanel">
+        <pre><code id="cmd-ps">irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex</code><button class="copy">copy</button></pre>
+      </div>
+      <div class="tabpane" id="p-cg" role="tabpanel">
+        <pre><code id="cmd-cg">cargo install --git https://github.com/mamad7202202/dragon-agent</code><button class="copy">copy</button></pre>
+      </div>
     </div>
-    <div class="card">
-      <h3 style="font-size:16px">🖥 Desktop app <span class="mono" style="color:var(--ash);font-weight:400">· dragon-gui</span></h3>
-      <p style="color:var(--ash);font-size:13.5px;margin:8px 0 12px">Liquid-glass UI, light & dark themes, memory browser, provider manager.</p>
-      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-windows-amd64.exe">windows</a>&nbsp;
-      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-linux-amd64">linux</a>&nbsp;
-      <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-darwin-arm64">macOS</a>
-      <p style="color:var(--ash);font-size:13px;margin-top:14px;margin-bottom:0">
-        Raw executables from the newest versioned release — no archives, no installer,
-        plus a <code class="inl">checksums.txt</code>. The apps check GitHub on launch and tell you when a new version is out.
-      </p>
+    <div class="pane">
+      <h3 style="font-size:17px"><span data-i="guiT">Desktop app</span> <span class="mono" style="color:var(--ash);font-weight:400;font-size:13px">· dragon-gui</span></h3>
+      <p style="color:var(--ash);font-size:13.8px;margin:8px 0 16px" data-i="guiP">A native window around the same core: memory browser, provider manager, light &amp; dark themes.</p>
+      <div class="dl-links">
+        <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-windows-amd64.exe" data-i="guiWin">windows</a>
+        <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-linux-amd64" data-i="guiLin">linux</a>
+        <a class="btn" href="https://github.com/mamad7202202/dragon-agent/releases/latest/download/dragon-gui-darwin-arm64" data-i="guiMac">macOS</a>
+      </div>
+      <p class="note" data-i="guiNote">Raw executables from the newest release — no archives, no installer — plus a <code class="inl">checksums.txt</code>. Both apps ping GitHub on launch and tell you when a new version is out.</p>
     </div>
   </div>
 </section>
 
-<!-- modes -->
+<!-- ── modes ── -->
 <section id="modes">
-  <div class="kicker">modes</div>
-  <h2 class="sec">Three ways to talk to it</h2>
-  <p class="lead">Switch per session — chat for thinking out loud, plan before touching files, agent when you mean it.</p>
-  <div class="modes">
-    <div class="mode"><h4 class="f-sky">💬 chat</h4><p>Pure conversation. No tools, no file access — fastest and cheapest.</p></div>
-    <div class="mode"><h4 class="f-gold">🗺 plan</h4><p>Read-only research (files, grep, web). Ends with a concrete numbered plan — nothing is modified.</p></div>
-    <div class="mode"><h4 class="f-ember">🐉 agent</h4><p>Full toolkit: read/write/edit/delete, shell, fetch. World-changing actions require your explicit approval.</p></div>
+  <p class="kicker" data-i="kModes">modes</p>
+  <h2 class="sec" data-i="moH2">Three ways to talk to it.</h2>
+  <p class="lead" data-i="moLead">Switch per session — chat to think out loud, plan before touching files, agent when you mean it.</p>
+  <div class="grid g3">
+    <div class="mode mode-chat"><div class="mode-head mono" data-i="chatH">chat</div><p data-i="chatP">Pure conversation. No tools, no file access — fastest and cheapest.</p></div>
+    <div class="mode mode-plan"><div class="mode-head mono" data-i="planH">plan</div><p data-i="planP">Read-only research: files, grep, web. Ends with a concrete numbered plan — nothing changes on disk.</p></div>
+    <div class="mode mode-agent"><div class="mode-head mono" data-i="agentH">agent</div><p data-i="agentP">The full toolkit: read, write, edit, delete, shell, fetch. Actions that change the world ask first.</p></div>
   </div>
 </section>
 
-<!-- features -->
+<!-- ── memory ── -->
+<section id="memory">
+  <p class="kicker" data-i="kMemory">memory</p>
+  <h2 class="sec" data-i="meH2">Memory is the product.</h2>
+  <p class="lead" data-i="meLead">Most agents forget you the moment a tab closes. Dragon remembers — precisely, and cheaply.</p>
+  <dl class="layers">
+    <div class="layer">
+      <dt><span class="l-sem" data-i="semT">semantic</span><small class="mono">facts.json</small></dt>
+      <dd data-i="semD">Discrete facts recalled every turn by relevance × importance × recency. No vector database — scoring runs locally, offline, in microseconds.</dd>
+    </div>
+    <div class="layer">
+      <dt><span class="l-pro" data-i="proT">procedural</span><small class="mono">MEMORY.md</small></dt>
+      <dd data-i="proD">Standing instructions in plain markdown, always loaded into the prompt.</dd>
+    </div>
+    <div class="layer">
+      <dt><span class="l-epi" data-i="epiT">episodic</span><small class="mono">sessions/*.jsonl</small></dt>
+      <dd data-i="epiD">Every conversation kept as an append-only transcript — resumable any time.</dd>
+    </div>
+    <div class="layer">
+      <dt><span class="l-com" data-i="comT">compaction</span><small class="mono" data-i="comS">long sessions</small></dt>
+      <dd data-i="comD">Old turns fold into an LLM summary once history passes a threshold; recent turns stay verbatim.</dd>
+    </div>
+  </dl>
+  <div class="formula">score = relevance × (0.55 + 0.45·importance) × (0.7 + 0.3·recency) × scope_boost</div>
+</section>
+
+<!-- ── why dragon ── -->
 <section id="features">
-  <div class="kicker">why dragon</div>
-  <h2 class="sec">Memory is the product</h2>
-  <p class="lead">Most agents forget you the moment a tab closes. Dragon remembers — precisely, and cheaply.</p>
+  <p class="kicker" data-i="kWhy">why dragon</p>
+  <h2 class="sec" data-i="feH2">Built around remembering.</h2>
+  <p class="lead" data-i="feLead">From day one — plus everything you'd expect from a serious tool.</p>
   <div class="grid g3">
-    <div class="card feat"><span class="ic f-ember">◈</span><b>Session-scoped memory</b>
-      <p>Facts belong to the conversation they were learned in. Recall ranks them by relevance × importance × recency and injects only the top few — minimal tokens, maximal signal.</p></div>
-    <div class="card feat"><span class="ic f-gold">◇</span><b>Global knowledge</b>
-      <p>Durable preferences travel across sessions via <b>global</b> facts and a plain <b>MEMORY.md</b> of standing instructions.</p></div>
-    <div class="card feat"><span class="ic f-jade">◆</span><b>Permission gate</b>
-      <p>Writes, deletes and shell commands ask first. "Always allow" remembers your choice, and an independent explainer tells you what any action does before you decide.</p></div>
-    <div class="card feat"><span class="ic f-sky">▣</span><b>Sessions everywhere</b>
-      <p>Every conversation is a resumable JSONL transcript. Continue last week's task in the GUI or the CLI — history, mode and memories come back with it.</p></div>
-    <div class="card feat"><span class="ic f-violet">▤</span><b>BYOK presets</b>
-      <p>Google AI Studio, OpenRouter, OpenAI, Anthropic, Groq, DeepSeek, Ollama, LM Studio — one-liner setup, keys never leave your machine.</p></div>
-    <div class="card feat"><span class="ic f-flame">◉</span><b>Native speed</b>
-      <p>Pure Rust, hand-rolled SSE streaming, single static binary per platform. Millisecond cold starts, no Node, no Electron.</p></div>
+    <div class="pane feat"><span class="ic f-jade">◆</span><b data-i="f1t">Permission gate</b><p data-i="f1d">Writes, deletes and shell commands pause for approval. “Always allow” remembers your choice, and an independent explainer says what an action does before you decide.</p></div>
+    <div class="pane feat"><span class="ic f-sky">▣</span><b data-i="f2t">Sessions everywhere</b><p data-i="f2d">Every conversation is a resumable JSONL transcript. Continue last week's task in the GUI or the CLI — history, mode and memories come back with it.</p></div>
+    <div class="pane feat"><span class="ic f-violet">▤</span><b data-i="f3t">BYOK presets</b><p data-i="f3d">Google AI Studio, OpenRouter, OpenAI, Anthropic, Groq, DeepSeek, Ollama, LM Studio — one-liner setup, keys never leave your machine.</p></div>
+    <div class="pane feat"><span class="ic f-flame">◉</span><b data-i="f4t">Native speed</b><p data-i="f4d">Pure Rust, hand-rolled SSE streaming, one binary per platform. Millisecond cold starts — no Node, no Electron.</p></div>
+    <div class="pane feat"><span class="ic f-gold">◇</span><b data-i="f5t">Private by default</b><p data-i="f5d">Config, memory and transcripts live in your user directory. Nothing is sent anywhere except the provider you chose.</p></div>
+    <div class="pane feat"><span class="ic f-ember">◈</span><b data-i="f6t">Ember-lit TUI</b><p data-i="f6d">A ratatui interface with streaming responses and live tool activity — built for long nights in the terminal.</p></div>
+  </div>
+</section>
+
+<!-- ── providers ── -->
+<section id="providers">
+  <p class="kicker" data-i="kProv">providers</p>
+  <h2 class="sec" data-i="prH2">Your keys. Your models.</h2>
+  <p class="lead" data-i="prLead">Eight built-in presets, plus any OpenAI-compatible endpoint. Mix providers freely — each keeps its own key and model list.</p>
+  <div class="chip-row mono">
+    <span class="chip">google</span><span class="chip">openrouter</span><span class="chip">openai</span>
+    <span class="chip">anthropic</span><span class="chip">groq</span><span class="chip">deepseek</span>
+    <span class="chip">ollama</span><span class="chip">lmstudio</span><span class="chip" data-i="prCustom">+ custom url</span>
   </div>
 </section>
 
 <footer>
-  <span>created by <a href="https://t.me/mamad720220">@mamad720220</a></span>
-  <span><a href="https://github.com/mamad7202202/dragon-agent">source</a> · <a href="docs.html">docs</a> · <a href="stats.html">stats</a> · MIT</span>
+  <span><span data-i="madeBy">created by</span> <a href="https://t.me/mamad720220">@mamad720220</a></span>
+  <span><a href="https://github.com/mamad7202202/dragon-agent" data-i="fSource">source</a> · <a href="docs.html" data-i="fDocs">docs</a> · <a href="stats.html" data-i="fStats">stats</a> · MIT</span>
 </footer>
 </div>
 
+<script src="site.js"></script>
 <script>
-document.querySelectorAll(".copy").forEach(b=>{
-  b.onclick=()=>{
-    const code=b.parentElement.querySelector("code");
-    navigator.clipboard.writeText(code.textContent).then(()=>{
-      b.textContent="copied";setTimeout(()=>b.textContent="copy",1200);
-    });
-  };
-});
+DG_LANG({
+en:{
+ title:"Dragon Agent — a fast AI agent with a long memory",
+ nHome:"home",nDocs:"docs",nStats:"live stats",nGh:"github ↗",
+ kickHero:"open-source · rust · bring-your-own-key",
+ h1:"A fast agent,<br>with <b>a memory that lasts.</b>",
+ sub:"Dragon Agent is an open-source AI agent for your terminal, written in pure Rust. A streaming TUI and a native desktop app share one core — hybrid memory that survives sessions, permission-gated tools, and any model you bring.",
+ ctaInstall:"get started",ctaDocs:"read the docs",ctaStats:"live stats",
+ metaRow:'<span><b>v0.4.0</b> latest release</span><span>zero telemetry</span><span>windows · linux · macOS</span><span>MIT license</span>',
+ termTitle:"dragon — interactive session",termLive:"live demo",
+ kInstall:"install",
+ iH2:"One command from install, two faces for work.",
+ iLead:"Pick the terminal, the desktop — or both. They share config, memory and sessions.",
+ cliT:"Terminal CLI",guiT:"Desktop app",
+ cliP:"Streaming TUI with mouse support, session resume and permission prompts.",
+ guiP:"A native window around the same core: memory browser, provider manager, light &amp; dark themes.",
+ tabSh:"linux / macos",tabPs:"windows powershell",tabCargo:"cargo",
+ guiWin:"windows",guiLin:"linux",guiMac:"macOS",
+ guiNote:'Raw executables from the newest release — no archives, no installer — plus a <code class="inl">checksums.txt</code>. Both apps ping GitHub on launch and tell you when a new version is out.',
+ kModes:"modes",
+ moH2:"Three ways to talk to it.",
+ moLead:"Switch per session — chat to think out loud, plan before touching files, agent when you mean it.",
+ chatH:"chat",chatP:"Pure conversation. No tools, no file access — fastest and cheapest.",
+ planH:"plan",planP:"Read-only research: files, grep, web. Ends with a concrete numbered plan — nothing changes on disk.",
+ agentH:"agent",agentP:"The full toolkit: read, write, edit, delete, shell, fetch. Actions that change the world ask first.",
+ kMemory:"memory",
+ meH2:"Memory is the product.",
+ meLead:"Most agents forget you the moment a tab closes. Dragon remembers — precisely, and cheaply.",
+ semT:"semantic",semD:"Discrete facts recalled every turn by relevance × importance × recency. No vector database — scoring runs locally, offline, in microseconds.",
+ proT:"procedural",proD:"Standing instructions in plain markdown, always loaded into the prompt.",
+ epiT:"episodic",epiD:"Every conversation kept as an append-only transcript — resumable any time.",
+ comT:"compaction",comS:"long sessions",comD:"Old turns fold into an LLM summary once history passes a threshold; recent turns stay verbatim.",
+ kWhy:"why dragon",
+ feH2:"Built around remembering.",
+ feLead:"From day one — plus everything you'd expect from a serious tool.",
+ f1t:"Permission gate",f1d:"Writes, deletes and shell commands pause for approval. “Always allow” remembers your choice, and an independent explainer says what an action does before you decide.",
+ f2t:"Sessions everywhere",f2d:"Every conversation is a resumable JSONL transcript. Continue last week's task in the GUI or the CLI — history, mode and memories come back with it.",
+ f3t:"BYOK presets",f3d:"Google AI Studio, OpenRouter, OpenAI, Anthropic, Groq, DeepSeek, Ollama, LM Studio — one-liner setup, keys never leave your machine.",
+ f4t:"Native speed",f4d:"Pure Rust, hand-rolled SSE streaming, one binary per platform. Millisecond cold starts — no Node, no Electron.",
+ f5t:"Private by default",f5d:"Config, memory and transcripts live in your user directory. Nothing is sent anywhere except the provider you chose.",
+ f6t:"Ember-lit TUI",f6d:"A ratatui interface with streaming responses and live tool activity — built for long nights in the terminal.",
+ kProv:"providers",
+ prH2:"Your keys. Your models.",
+ prLead:"Eight built-in presets, plus any OpenAI-compatible endpoint. Mix providers freely — each keeps its own key and model list.",
+ prCustom:"+ custom url",
+ madeBy:"created by",fSource:"source",fDocs:"docs",fStats:"stats",
+ copy:"copy",copied:"copied"
+},
+fa:{
+ title:"Dragon Agent — ایجنتی سریع با حافظه‌ای بلند",
+ nHome:"خانه",nDocs:"مستندات",nStats:"آمار زنده",nGh:"گیت‌هاب ↗",
+ kickHero:"متن‌باز · Rust · کلید و مدل خودت",
+ h1:"ایجنتی سریع،<br>با <b>حافظه‌ای ماندگار.</b>",
+ sub:"Dragon Agent ایجنتی متن‌باز برای ترمینال شماست؛ نوشته‌شده با Rust خالص. یک رابط استریمی در ترمینال و یک اپ دسکتاپ بومی، هسته‌ی مشترکی دارند: حافظه‌ی ترکیبی که بعد از بسته‌شدن نشست هم می‌ماند، ابزارهای دارای مجوز، و هر مدلی که خودتان بیاورید.",
+ ctaInstall:"شروع کنید",ctaDocs:"خواندن مستندات",ctaStats:"آمار زنده",
+ metaRow:'<span><b>v0.4.0</b> آخرین انتشار</span><span>بدون تلمتری</span><span>ویندوز · لینوکس · مک</span><span>مجوز MIT</span>',
+ termTitle:"dragon — نشست تعاملی",termLive:"دموی زنده",
+ kInstall:"نصب",
+ iH2:"یک فرمان تا نصب؛ دو چهره برای کار.",
+ iLead:"ترمینال یا دسکتاپ — یا هر دو. کانفیگ، حافظه و نشست‌ها بین‌شان مشترک است.",
+ cliT:"رابط خط فرمان",guiT:"اپ دسکتاپ",
+ cliP:"رابط استریمی با پشتیبانی موس، ادامه‌ی نشست‌ها و پرامپت‌های مجوز.",
+ guiP:"پنجره‌ی بومی دور همان هسته: مرورگر حافظه، مدیریت ارائه‌دهنده‌ها، تم روشن و تاریک.",
+ tabSh:"لینوکس / مک",tabPs:"ویندوز پاورشل",tabCargo:"cargo",
+ guiWin:"ویندوز",guiLin:"لینوکس",guiMac:"macOS",
+ guiNote:'فایل اجرایی خام از جدیدترین انتشار — بدون آرشیو و نصب‌کننده — به‌همراه <code class="inl">checksums.txt</code>. هر دو اپ موقع اجرا گیت‌هاب را چک می‌کنند و از نسخه‌ی تازه خبر می‌دهند.',
+ kModes:"حالت‌ها",
+ moH2:"سه راه برای حرف زدن با آن.",
+ moLead:"در هر نشست عوضش کنید — chat برای فکر کردن با صدای بلند، plan پیش از دست‌زدن به فایل‌ها، agent وقتی جدی شده‌اید.",
+ chatH:"chat",chatP:"گفت‌وگوی خالص. بدون ابزار و دسترسی به فایل — سریع‌ترین و ارزان‌ترین حالت.",
+ planH:"plan",planP:"پژوهش فقط‌خواندنی: فایل، grep، وب. خروجی، برنامه‌ای مشخص و شماره‌دار است — روی دیسک چیزی عوض نمی‌شود.",
+ agentH:"agent",agentP:"کل جعبه‌ابزار: خواندن، نوشتن، ویرایش، حذف، شل و وب. کارهایی که دنیا را عوض می‌کنند اول اجازه می‌گیرند.",
+ kMemory:"حافظه",
+ meH2:"حافظه، خودِ محصول است.",
+ meLead:"بیشتر ایجنت‌ها همان لحظه که تب بسته می‌شود همه را فراموش می‌کنند. Dragon یادش می‌ماند — دقیق و کم‌هزینه.",
+ semT:"معنایی",semD:"حقایق مجزا که هر نوبت با «ربط × اهمیت × تازگی» بازیابی می‌شوند. بدون دیتابیس برداری — امتیازدهی محلی، آفلاین و در حد میکروثانیه.",
+ proT:"رویه‌ای",proD:"دستورالعمل‌های دائمی در مارک‌داون ساده؛ همیشه داخل پرامپت لود می‌شوند.",
+ epiT:"روایی",epiD:"هر گفت‌وگو به‌صورت رونوشت الحاقی نگه داشته می‌شود — هر وقت خواستید ادامه‌اش دهید.",
+ comT:"فشرده‌سازی",comS:"نشست‌های طولانی",comD:"وقتی تاریخچه از حد بگذرد، پیام‌های قدیمی در یک خلاصه تا می‌شوند؛ پیام‌های تازه دست‌نخورده می‌مانند.",
+ kWhy:"چرا Dragon؟",
+ feH2:"ساخته‌شده دور حافظه.",
+ feLead:"از روز اول — به‌علاوه‌ی هر چیزی که از یک ابزار جدی انتظار دارید.",
+ f1t:"دروازه‌ی مجوز",f1d:"نوشتن، حذف و فرمان‌های شل برای تأیید توقف می‌کنند. «همیشه اجازه» انتخاب شما را به خاطر می‌سپارد و توضیح‌گریِ مستقل پیش از تصمیم می‌گوید آن کار دقیقاً چه می‌کند.",
+ f2t:"نشست، همه‌جا",f2d:"هر گفت‌وگو یک رونوشت JSONL قابل‌ادامه است. کار هفته‌ی پیش را در GUI یا CLI ادامه دهید — تاریخچه، حالت و حافظه‌ها همراهش برمی‌گردند.",
+ f3t:"پیش‌تنظیم BYOK",f3d:"Google AI Studio، OpenRouter، OpenAI، Anthropic، Groq، DeepSeek، Ollama و LM Studio — راه‌اندازی یک‌خطی؛ کلیدها هیچ‌وقت از دستگاه شما بیرون نمی‌روند.",
+ f4t:"سرعت بومی",f4d:"Rust خالص، استریم SSE دست‌ساز، یک باینری برای هر پلتفرم. استارت سرد در حد میلی‌ثانیه — نه Node، نه Electron.",
+ f5t:"خصوصی، به‌صورت پیش‌فرض",f5d:"کانفیگ، حافظه و رونوشت‌ها در پوشه‌ی خودتان می‌مانند. هیچ‌جا چیزی فرستاده نمی‌شود جز همان ارائه‌دهنده‌ای که انتخاب کرده‌اید.",
+ f6t:"ترمینالی با نور آتش",f6d:"رابطی با ratatui؛ پاسخ‌های استریمی و فعالیت زنده‌ی ابزارها — ساخته‌شده برای شب‌های طولانی ترمینال.",
+ kProv:"ارائه‌دهنده‌ها",
+ prH2:"کلید شما. مدل شما.",
+ prLead:"هشت پیش‌تنظیم آماده، به‌علاوه‌ی هر اندپوینت سازگار با OpenAI. ارائه‌دهنده‌ها را آزادانه قاطی کنید — هر کدام کلید و فهرست مدل خودش را دارد.",
+ prCustom:"+ آدرس دلخواه",
+ madeBy:"ساخته‌ی",fSource:"سورس",fDocs:"مستندات",fStats:"آمار",
+ copy:"کپی",copied:"کپی شد"
+}});
+
+/* tabs */
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));
+  document.querySelectorAll(".tabpane").forEach(p=>p.classList.toggle("on",p.id===t.dataset.pane));
+}));
+
+/* the demo session — commands stay universal, chat follows the language */
+const S=(c,s)=>({c,s});
+window.DG_SCRIPTS={
+en:[
+ S("tl-in","dragon setup --preset google --key AIza…"),
+ S("tl-ok","✓ provider saved · google/gemini-2.0-flash"),
+ S("tl-in","dragon"),
+ S("tl-out","── dragon v0.4.0 · new session · mode: agent ──"),
+ S("tl-in","remember: I deploy with docker compose"),
+ S("tl-mem","⬤ save_memory → global fact #12 stored"),
+ S("tl-in","what did we decide about deploys?"),
+ S("tl-mem","⬤ recall · 1 fact · “deploys with docker compose”"),
+ S("tl-out","Last time you said docker compose. Want me to draft the file?")
+],
+fa:[
+ S("tl-in","dragon setup --preset google --key AIza…"),
+ S("tl-ok","✓ provider ذخیره شد · google/gemini-2.0-flash"),
+ S("tl-in","dragon"),
+ S("tl-out","── dragon v0.4.0 · نشست جدید · حالت: agent ──"),
+ S("tl-in","یادت باشه: دیپلوی‌ام با docker compose هست"),
+ S("tl-mem","⬤ save_memory ← حافظه‌ی سراسری · حقیقه‌ی #۱۲"),
+ S("tl-in","درباره‌ی دیپلوی چه تصمیمی گرفتیم؟"),
+ S("tl-mem","⬤ recall · ۱ حقیقت · «دیپلوی با docker compose»"),
+ S("tl-out","دفعه‌ی قبل گفتی docker compose. فایلش را بنویسم؟")
+]};
+let scriptFor=()=>DG_SCRIPTS[document.documentElement.lang==="fa"?"fa":"en"];
+DG_TERMINAL(scriptFor);
 </script>
 </body>
 </html>

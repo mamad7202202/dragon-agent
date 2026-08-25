@@ -1,87 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Documentation — Dragon Agent</title>
+<meta name="description" content="Dragon Agent documentation: install, providers, modes, permission gate, memory system, configuration, sessions, tools, CLI and desktop app.">
+<script>try{const l=localStorage.getItem("dg-lang");if(l==="fa"){document.documentElement.lang="fa";document.documentElement.dir="rtl"}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Lalezar&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<style>
-.layout{display:grid;grid-template-columns:250px 1fr;gap:40px;padding-top:26px}
-@media(max-width:900px){.layout{grid-template-columns:1fr}}
-#toc{position:sticky;top:20px;align-self:start;max-height:calc(100vh - 60px);overflow-y:auto;
-     border-right:1px solid var(--line);padding-right:18px}
-#toc a{display:block;color:var(--ash);text-decoration:none;font-size:13.5px;padding:5px 10px;border-radius:8px;transition:.12s}
-#toc a:hover{color:var(--flame);background:rgba(255,152,74,.06)}
-#toc a.h1{color:var(--bone);font-weight:700;margin-top:14px}
-#toc a.h2{margin-left:10px}
-article{max-width:760px;padding-bottom:80px}
-article h1{font-size:34px;margin-bottom:6px}
-article h2{font-size:23px;margin:44px 0 10px;padding-top:8px}
-article h3{font-size:16.5px;margin:26px 0 8px;color:var(--gold)}
-article p{color:#c9c5bd;margin:10px 0;font-size:14.5px}
-article ul{color:#c9c5bd;margin:8px 0 14px 22px;font-size:14.3px}
-article li{margin-bottom:4px}
-.progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--ember),var(--gold));z-index:99;width:0}
-</style>
 </head>
 <body>
 <div class="progress" id="progress"></div>
 
 <div class="wrap">
 <nav class="top">
-  <a class="brand" href="index.html"><b>DRAGON</b> <span>AGENT</span></a>
+  <a class="brand" href="index.html">dragon<em>_</em></a>
   <div class="links">
-    <a href="index.html">home</a>
-    <a href="docs.html" class="active">docs</a>
-    <a href="stats.html">live stats</a>
-    <a href="https://github.com/mamad7202202/dragon-agent">github ↗</a>
+    <a href="index.html" data-i="nHome">home</a>
+    <a href="docs.html" data-i="nDocs" aria-current="page">docs</a>
+    <a href="stats.html" data-i="nStats">live stats</a>
+    <a href="https://github.com/mamad7202202/dragon-agent" data-i="nGh">github ↗</a>
+    <button class="lang-btn">فا</button>
   </div>
 </nav>
 
 <div class="layout">
 <aside id="toc">
-  <a class="h1" href="#start">Getting started</a>
-  <a class="h2" href="#install">Install</a>
-  <a class="h2" href="#first-run">First run wizard</a>
-  <a class="h1" href="#providers">Providers & models</a>
-  <a class="h2" href="#presets">Built-in presets</a>
-  <a class="h2" href="#custom">Custom endpoints</a>
-  <a class="h1" href="#modes">Modes: chat · plan · agent</a>
-  <a class="h1" href="#permissions">Permission gate</a>
-  <a class="h1" href="#memory">The memory system</a>
-  <a class="h2" href="#scopes">Session vs global</a>
-  <a class="h2" href="#recall">Token-efficient recall</a>
-  <a class="h1" href="#sessions">Sessions</a>
-  <a class="h1" href="#tools">Tool reference</a>
-  <a class="h1" href="#cli-ref">CLI reference</a>
-  <a class="h1" href="#gui">Desktop app</a>
-  <a class="h1" href="#updates">Updates</a>
-  <a class="h1" href="#faq">FAQ</a>
+  <a class="h1" href="#start" data-i="tStart">Getting started</a>
+  <a class="h2" href="#install" data-i="tInstall">Install</a>
+  <a class="h2" href="#first-run" data-i="tFirst">First run wizard</a>
+  <a class="h1" href="#providers" data-i="tProv">Providers &amp; models</a>
+  <a class="h2" href="#presets" data-i="tPresets">Built-in presets</a>
+  <a class="h2" href="#custom" data-i="tCustom">Custom endpoints</a>
+  <a class="h1" href="#modes" data-i="tModes">Modes: chat · plan · agent</a>
+  <a class="h1" href="#permissions" data-i="tPerm">Permission gate</a>
+  <a class="h1" href="#memory" data-i="tMem">The memory system</a>
+  <a class="h2" href="#scopes" data-i="tScopes">Two scopes of facts</a>
+  <a class="h2" href="#recall" data-i="tRecall">How recall stays cheap</a>
+  <a class="h1" href="#config" data-i="tConfig">Configuration</a>
+  <a class="h1" href="#sessions" data-i="tSess">Sessions</a>
+  <a class="h1" href="#tools" data-i="tTools">Tool reference</a>
+  <a class="h1" href="#cli-ref" data-i="tCli">CLI reference</a>
+  <a class="h1" href="#gui" data-i="tGui">Desktop app</a>
+  <a class="h1" href="#building" data-i="tBuild">Building</a>
+  <a class="h1" href="#roadmap" data-i="tRoad">Roadmap</a>
+  <a class="h1" href="#updates" data-i="tUpd">Updates</a>
+  <a class="h1" href="#faq" data-i="tFaq">FAQ</a>
 </aside>
 
 <article>
-  <div class="kicker">documentation</div>
-  <h1>Everything Dragon can do</h1>
-  <p style="color:var(--ash)">Ten minutes here saves hours later. Every claim below matches the shipped binary.</p>
+  <p class="kicker" data-i="kDoc">documentation</p>
+  <h1 data-i="dH1">Everything Dragon can do.</h1>
+  <p style="color:var(--ash)" data-i="dIntro">Ten minutes here saves hours later. Every claim below matches the shipped binary.</p>
 
-  <h2 id="start">Getting started</h2>
+  <h2 id="start" data-i="sStart">Getting started</h2>
 
-  <h3 id="install">Install</h3>
-  <p>One line on Linux/macOS:</p>
-  <pre><code>curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh</code></pre>
-  <p>And on Windows PowerShell:</p>
-  <pre><code>irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex</code></pre>
-  <p>The scripts download a single static executable into your user bin directory and wire up PATH.
-     Prefer cargo? <code class="inl">cargo install --git https://github.com/mamad7202202/dragon-agent</code>.
-     The desktop app (<code class="inl">dragon-gui</code>) is an optional separate download from
-     <a style="color:var(--sky)" href="https://github.com/mamad7202202/dragon-agent/releases">releases</a>.</p>
+  <h3 id="install" data-i="sInstall">Install</h3>
+  <p data-i="pInst1">One line on Linux/macOS:</p>
+  <pre><code>curl -fsSL https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.sh | sh</code><button class="copy">copy</button></pre>
+  <p data-i="pInst2">And on Windows PowerShell:</p>
+  <pre><code>irm https://raw.githubusercontent.com/mamad7202202/dragon-agent/main/install.ps1 | iex</code><button class="copy">copy</button></pre>
+  <p data-i="pInst3">The scripts download a single static executable into your user bin directory and wire up PATH. Prefer cargo? <code class="inl">cargo install --git https://github.com/mamad7202202/dragon-agent</code>. The desktop app (<code class="inl">dragon-gui</code>) is an optional separate download from the releases page.</p>
 
-  <h3 id="first-run">First run wizard</h3>
-  <p>Launch <code class="inl">dragon</code> (or the desktop app) with no config and an interactive
-     setup walks you through three questions: provider → key → models.
-     In the TUI you navigate with <b>↑ / ↓</b> and confirm with <b>space</b> or <b>enter</b>;
-     typing is always accepted too. Re-run any time inside the TUI with
-     <code class="inl">/setup</code>, or from your shell:</p>
+  <h3 id="first-run" data-i="sFirst">First run wizard</h3>
+  <p data-i="pFirst1">Launch <code class="inl">dragon</code> (or the desktop app) with no config and an interactive setup walks you through three questions: provider → key → models. In the TUI you navigate with ↑ / ↓ and confirm with space or enter; typing is always accepted too. Re-run any time inside the TUI with <code class="inl">/setup</code>, or straight from your shell:</p>
   <pre><code># Google AI Studio (Gemini) - has a free tier
 dragon setup --preset google --key AIza...
 
@@ -91,101 +75,117 @@ dragon setup --preset openrouter --key sk-or-...
 # fully local, no cloud
 dragon setup --preset ollama</code></pre>
 
-  <h2 id="providers">Providers &amp; models</h2>
-  <p>Dragon speaks two protocols: <b>OpenAI-compatible</b> chat-completions and Anthropic's
-     native <b>Messages</b> API - both streamed over hand-rolled SSE for instant first tokens.</p>
+  <h2 id="providers" data-i="sProv">Providers &amp; models</h2>
+  <p data-i="pProv">Dragon speaks two protocols: OpenAI-compatible chat-completions and Anthropic's native Messages API — both streamed over hand-rolled SSE for instant first tokens.</p>
 
-  <h3 id="presets">Built-in presets</h3>
+  <h3 id="presets" data-i="sPresets">Built-in presets</h3>
   <table class="t">
-    <tr><th>preset</th><th>what</th><th>key from</th></tr>
-    <tr><td><code class="inl">google</code></td><td>Google AI Studio (Gemini)</td><td>aistudio.google.com/apikey — free tier</td></tr>
-    <tr><td><code class="inl">openrouter</code></td><td>400+ models behind one key</td><td>openrouter.ai/keys</td></tr>
-    <tr><td><code class="inl">openai</code></td><td>GPT family</td><td>platform.openai.com</td></tr>
-    <tr><td><code class="inl">anthropic</code></td><td>Claude (native protocol)</td><td>console.anthropic.com</td></tr>
-    <tr><td><code class="inl">groq</code></td><td>ultra-fast open models</td><td>console.groq.com/keys</td></tr>
-    <tr><td><code class="inl">deepseek</td></td><td>chat / reasoner</td><td>platform.deepseek.com</td></tr>
-    <tr><td><code class="inl">ollama</code></td><td>local models, no key needed</td><td>—</td></tr>
-    <tr><td><code class="inl">lmstudio</td></td><td>local LM Studio server</td><td>—</td></tr>
+    <thead><tr><th data-i="thPreset">preset</th><th data-i="thWhat">what</th><th data-i="thKey">key from</th></tr></thead>
+    <tbody>
+      <tr><td><code class="inl">google</code></td><td data-i="prGoogle">Google AI Studio (Gemini)</td><td>aistudio.google.com/apikey — <span data-i="freeTier">free tier</span></td></tr>
+      <tr><td><code class="inl">openrouter</code></td><td data-i="prOr">400+ models behind one key</td><td>openrouter.ai/keys</td></tr>
+      <tr><td><code class="inl">openai</code></td><td data-i="prOai">GPT family</td><td>platform.openai.com</td></tr>
+      <tr><td><code class="inl">anthropic</code></td><td data-i="prAnt">Claude (native protocol)</td><td>console.anthropic.com</td></tr>
+      <tr><td><code class="inl">groq</code></td><td data-i="prGroq">ultra-fast open models</td><td>console.groq.com/keys</td></tr>
+      <tr><td><code class="inl">deepseek</code></td><td data-i="prDs">chat / reasoner</td><td>platform.deepseek.com</td></tr>
+      <tr><td><code class="inl">ollama</code></td><td data-i="prOll">local models, no key needed</td><td>—</td></tr>
+      <tr><td><code class="inl">lmstudio</code></td><td data-i="prLms">local LM Studio server</td><td>—</td></tr>
+    </tbody>
   </table>
-  <div class="callout"><b>Mix freely.</b> Providers are independent entries in one TOML file -
-     add several, switch mid-session with <code class="inl">/model provider/name</code>, and each keeps its own key.</div>
+  <div class="callout"><b data-i="mixB">Mix freely.</b> <span data-i="mixT">Providers are independent entries in one TOML file — add several, switch mid-session with /model provider/name, and each keeps its own key.</span></div>
 
-  <h3 id="custom">Custom endpoints</h3>
+  <h3 id="custom" data-i="sCustom">Custom endpoints</h3>
   <pre><code>dragon setup --preset custom --url https://my-gateway.corp/v1 --key k --model m1
 # or manage by hand at:
 #   windows  %APPDATA%\dragon\config.toml
 #   linux    ~/.config/dragon/config.toml
 #   macos    ~/Library/Application Support/dragon/config.toml</code></pre>
 
-  <h2 id="modes">Modes: chat · plan · agent</h2>
+  <h2 id="modes" data-i="sModes">Modes: chat · plan · agent</h2>
   <ul>
-    <li><b style="color:var(--sky)">chat</b> — pure conversation, no tools. Cheapest way to think out loud.</li>
-    <li><b style="color:var(--gold)">plan</b> — read-only research (read, list, grep, fetch). The reply must be a concrete numbered plan; nothing on disk changes.</li>
-    <li><b style="color:var(--ember)">agent</b> — the full toolkit below, gated by permissions.</li>
+    <li><b style="color:var(--sky)">chat</b> — <span data-i="mChatT">pure conversation, no tools. The cheapest way to think out loud.</span></li>
+    <li><b style="color:var(--gold)">plan</b> — <span data-i="mPlanT">read-only research (read, list, grep, fetch). The reply must be a concrete numbered plan; nothing on disk changes.</span></li>
+    <li><b style="color:var(--ember)">agent</b> — <span data-i="mAgentT">the full toolkit below, gated by permissions.</span></li>
   </ul>
-  <p>Set per session: TUI <code class="inl">/mode plan</code> or <b>Ctrl+M</b> to cycle;
-     desktop uses the chips in the header. The default mode lives in settings.</p>
+  <p data-i="pModes">Set per session: TUI <code class="inl">/mode plan</code> or Ctrl+M to cycle; the desktop uses chips in the header. The default mode lives in settings.</p>
 
-  <h2 id="permissions">The permission gate</h2>
-  <p>Tools that change the world — <code class="inl">write_file</code>, <code class="inl">edit_file</code>,
-     <code class="inl">delete_file</code>, <code class="inl">run_shell</code> — pause the agent and show an approval card:</p>
+  <h2 id="permissions" data-i="sPerm">The permission gate</h2>
+  <p data-i="pPerm1">Tools that change the world — <code class="inl">write_file</code>, <code class="inl">edit_file</code>, <code class="inl">delete_file</code>, <code class="inl">run_shell</code> — pause the agent and show an approval card:</p>
   <ul>
-    <li><b>allow</b> — runs this once.</li>
-    <li><b>always allow</b> — remembers the choice per tool (patterns like <code class="inl">run_shell:npm</code> allow only npm-prefixed commands).</li>
-    <li><b>deny</b> — the model is told "user denied" and adapts instead of retrying.</li>
-    <li><b>what does this do?</b> — asks the model for a neutral, ≤3-sentence explanation of exactly what this action would do to your machine, independent of the task. Shown inline before you decide.</li>
+    <li><b data-i="pmAllow">allow</b> — <span data-i="pmAllowT">runs this once.</span></li>
+    <li><b data-i="pmAlways">always allow</b> — <span data-i="pmAlwaysT">remembers the choice per tool (patterns like run_shell:npm allow only npm-prefixed commands).</span></li>
+    <li><b data-i="pmDeny">deny</b> — <span data-i="pmDenyT">the model is told “user denied” and adapts instead of retrying.</span></li>
+    <li><b data-i="pmExpl">what does this do?</b> — <span data-i="pmExplT">asks the model for a neutral, ≤3-sentence explanation of exactly what this action would do to your machine, shown inline before you decide.</span></li>
   </ul>
-  <p>Esc always hard-stops a running turn — including while an approval is pending.</p>
+  <p data-i="pPerm2">Esc always hard-stops a running turn — including while an approval is pending.</p>
 
-  <h2 id="memory">The memory system</h2>
-  <p>Dragon's memory is deliberately split so the model gets maximum signal for minimum tokens:</p>
+  <h2 id="memory" data-i="sMem">The memory system</h2>
+  <p data-i="pMem1">Dragon's memory is deliberately split so the model gets maximum signal for minimum tokens. The agent itself decides what matters: it calls <code class="inl">save_memory</code> when it notices something durable, and every turn relevant facts are injected into the prompt.</p>
 
-  <h3 id="scopes">Two scopes of facts</h3>
+  <h3 id="scopes" data-i="sScopes">Two scopes of facts</h3>
   <ul>
-    <li><b style="color:var(--sky)">session facts</b> — learned inside this conversation (project layout, decisions, file paths). They never leak into other sessions.</li>
-    <li><b style="color:var(--gold)">global facts</b> — durable user knowledge ("prefers dark mode", team conventions) available everywhere.</li>
+    <li><b style="color:var(--sky)" data-i="scSes">session facts</b> — <span data-i="scSesT">learned inside this conversation (project layout, decisions, file paths). They never leak into other sessions.</span></li>
+    <li><b style="color:var(--gold)" data-i="scGlo">global facts</b> — <span data-i="scGloT">durable user knowledge (“prefers dark mode”, team conventions) available everywhere.</span></li>
   </ul>
-  <p>Plus <b>procedural memory</b>: a plain <code class="inl">MEMORY.md</code> whose standing instructions
-     are always loaded, and <b>episodic transcripts</b> — every session is a resumable JSONL log.</p>
+  <p data-i="pScopes">Plus procedural memory: a plain <code class="inl">MEMORY.md</code> whose standing instructions are always loaded, and episodic transcripts — every session is a resumable JSONL log.</p>
 
-  <h3 id="recall">How recall stays cheap</h3>
-  <p>Each turn, candidate facts are scored:</p>
+  <h3 id="recall" data-i="sRecall">How recall stays cheap</h3>
+  <p data-i="pRecall1">Each turn, candidate facts are scored:</p>
   <pre><code>score = relevance × (0.55 + 0.45·importance) × (0.7 + 0.3·recency) × scope_boost
 scope_boost = 1.35 session-fact | 1.0 global | 0.85 other-session leftover</code></pre>
-  <p>Only the <b>top-k winners</b> enter the prompt as a short block — everything else stays on disk.
-     Long conversations additionally compact: old turns are folded into an LLM summary once history
-     passes the threshold (settings), keeping recent context verbatim. No vector database,
-     no embedding bills — recall runs locally in microseconds.</p>
+  <p data-i="pRecall2">Only the top-k winners enter the prompt as a short block — everything else stays on disk. Long conversations additionally compact: old turns fold into an LLM summary once history passes the threshold in settings, keeping recent context verbatim. No vector database, no embedding bills — recall runs locally in microseconds.</p>
 
-  <h2 id="sessions">Sessions</h2>
-  <p>Every conversation gets an id, a title derived from your first message and a transcript on disk.
-     Resume any past session with its full history, mode and memories:</p>
+  <h2 id="config" data-i="sConfig">Configuration</h2>
+  <p data-i="pConf1">Everything lives under your user directory:</p>
+  <table class="t">
+    <thead><tr><th data-i="thPlat">platform</th><th data-i="thPath">path</th></tr></thead>
+    <tbody>
+      <tr><td>windows</td><td class="mono" dir="ltr">%APPDATA%\dragon\config.toml + %LOCALAPPDATA%\dragon\</td></tr>
+      <tr><td>linux</td><td class="mono" dir="ltr">~/.config/dragon/ + ~/.local/share/dragon/</td></tr>
+      <tr><td>macos</td><td class="mono" dir="ltr">~/Library/Application Support/dragon/</td></tr>
+    </tbody>
+  </table>
+  <pre><code>default_model = "openrouter/anthropic/claude-sonnet-4"
+
+[settings]
+allow_commands = false       # gate for the run_shell tool
+compaction_messages = 36     # fold history after this many entries
+
+[[providers]]
+name = "openrouter"
+base_url = "https://openrouter.ai/api/v1"
+api_key = "sk-or-..."
+models = ["anthropic/claude-sonnet-4", "openai/gpt-4o"]</code></pre>
+
+  <h2 id="sessions" data-i="sSess">Sessions</h2>
+  <p data-i="pSess1">Every conversation gets an id, a title derived from your first message and a transcript on disk. Resume any past session with its full history, mode and memories:</p>
   <pre><code>/sessions        # numbered list, newest first
 /resume 2        # continue it (CLI)
 Ctrl+S           # session popover (desktop)</code></pre>
-  <div class="callout"><b>Shared brain.</b> A session started in the terminal appears in the desktop app's
-     session list and vice-versa — same files, same memories.</div>
+  <div class="callout"><b data-i="brainB">Shared brain.</b> <span data-i="brainT">A session started in the terminal appears in the desktop app's session list and vice-versa — same files, same memories.</span></div>
 
-  <h2 id="tools">Tool reference</h2>
+  <h2 id="tools" data-i="sTools">Tool reference</h2>
   <table class="t">
-    <tr><th>tool</th><th>what it does</th><th>approval</th></tr>
-    <tr><td><code class="inl">read_file</code></td><td>read a text file</td><td>never</td></tr>
-    <tr><td><code class="inl">list_files</code></td><td>recursive listing, junk dirs skipped</td><td>never</td></tr>
-    <tr><td><code class="inl">grep</code></td><td>regex search across a tree, capped output</td><td>never</td></tr>
-    <tr><td><code class="inl">fetch_url</code></td><td>HTTP GET a page/API</td><td>never</td></tr>
-    <tr><td><code class="inl">search_memory</code></td><td>query both memory scopes</td><td>never</td></tr>
-    <tr><td><code class="inl">save_memory</code></td><td>persist session/global fact</td><td>never</td></tr>
-    <tr><td><code class="inl">write_file</code></td><td>create/overwrite a file</td><td>asked</td></tr>
-    <tr><td><code class="inl">edit_file</code></td><td>exact snippet replace (uniqueness-checked)</td><td>asked</td></tr>
-    <tr><td><code class="inl">delete_file</code></td><td>remove a file</td><td>asked</td></tr>
-    <tr><td><code class="inl">run_shell</code></td><td>execute a command line</td><td>asked + settings gate</td></tr>
+    <thead><tr><th data-i="thTool">tool</th><th data-i="thDoes">what it does</th><th data-i="thAppr">approval</th></tr></thead>
+    <tbody>
+      <tr><td><code class="inl">read_file</code></td><td data-i="tlRf">read a text file</td><td data-i="apNever">never</td></tr>
+      <tr><td><code class="inl">list_files</code></td><td data-i="tlLf">recursive listing, junk dirs skipped</td><td data-i="apNever2">never</td></tr>
+      <tr><td><code class="inl">grep</code></td><td data-i="tlGr">regex search across a tree, capped output</td><td data-i="apNever3">never</td></tr>
+      <tr><td><code class="inl">fetch_url</code></td><td data-i="tlFu">HTTP GET a page/API</td><td data-i="apNever4">never</td></tr>
+      <tr><td><code class="inl">search_memory</code></td><td data-i="tlSm">query both memory scopes</td><td data-i="apNever5">never</td></tr>
+      <tr><td><code class="inl">save_memory</code></td><td data-i="tlSv">persist session/global fact</td><td data-i="apNever6">never</td></tr>
+      <tr><td><code class="inl">write_file</code></td><td data-i="tlWf">create/overwrite a file</td><td data-i="apAsk">asked</td></tr>
+      <tr><td><code class="inl">edit_file</code></td><td data-i="tlEf">exact snippet replace (uniqueness-checked)</td><td data-i="apAsk2">asked</td></tr>
+      <tr><td><code class="inl">delete_file</code></td><td data-i="tlDf">remove a file</td><td data-i="apAsk3">asked</td></tr>
+      <tr><td><code class="inl">run_shell</code></td><td data-i="tlRs">execute a command line</td><td data-i="apAsk4">asked + settings gate</td></tr>
+    </tbody>
   </table>
 
-  <h2 id="cli-ref">CLI reference</h2>
+  <h2 id="cli-ref" data-i="sCli">CLI reference</h2>
   <pre><code>dragon                          interactive TUI
 dragon run "&lt;prompt&gt;"          one-shot answer (--no-tools for plain chat)
 dragon setup --preset ...       quick provider setup
-dragon models                   list providers & models
+dragon models                   list providers &amp; models
 dragon model add &lt;name&gt; &lt;url&gt;   manual provider entry
 dragon sessions                 list saved sessions
 dragon memory list|add|forget|clear
@@ -199,56 +199,48 @@ inside the TUI:
   Ctrl+N new · Ctrl+S sessions · Ctrl+M mode · Esc stop/quit
   mouse: click wizard rows, scroll wheel anywhere</code></pre>
 
-  <h2 id="gui">Desktop app</h2>
-  <p>A glassy native window around the same core:</p>
+  <h2 id="gui" data-i="sGui">Desktop app</h2>
+  <p data-i="pGui1">A native window around the same core:</p>
   <ul>
-    <li><b>Chat</b> — streaming bubbles, markdown-lite, copy buttons, approval cards with the explainer.</li>
-    <li><b>Sessions popover</b> — resume anything, start fresh (Ctrl+S / Ctrl+N).</li>
-    <li><b>Memory browser</b> — search, scope badges (session/global/other), forget.</li>
-    <li><b>Providers</b> — collapsible cards, click a model to make it current, modal add-form with presets.</li>
-    <li><b>Settings</b> — default model, shell gate, compaction threshold, light/dark theme (Ctrl+D).</li>
+    <li><b data-i="g1">Chat</b> — <span data-i="g1t">streaming bubbles, markdown-lite, copy buttons, approval cards with the explainer.</span></li>
+    <li><b data-i="g2">Sessions popover</b> — <span data-i="g2t">resume anything, start fresh (Ctrl+S / Ctrl+N).</span></li>
+    <li><b data-i="g3">Memory browser</b> — <span data-i="g3t">search, scope badges (session/global/other), forget.</span></li>
+    <li><b data-i="g4">Providers</b> — <span data-i="g4t">collapsible cards, click a model to make it current, modal add-form with presets.</span></li>
+    <li><b data-i="g5">Settings</b> — <span data-i="g5t">default model, shell gate, compaction threshold, light/dark theme (Ctrl+D).</span></li>
   </ul>
-  <p>Full shortcut sheet: press <code class="inl">?</code> inside the app.</p>
+  <p data-i="pGui2">Full shortcut sheet: press <code class="inl">?</code> inside the app.</p>
 
-  <h2 id="updates">Updates</h2>
-  <p>On every launch both apps ping GitHub's releases API. When a newer version exists you'll see
-     a banner (desktop) or footer note (TUI) linking straight to the release page. Releases are
-     versioned <code class="inl">vX.Y.Z</code> with raw executables plus <code class="inl">checksums.txt</code>,
-     and the installers always fetch the newest stable build.</p>
+  <h2 id="building" data-i="sBuild">Building from source</h2>
+  <p data-i="pBuild1">Requires Rust 1.75+:</p>
+  <pre><code>cargo build --release</code><button class="copy">copy</button></pre>
+  <p data-i="pBuild2">GitHub Actions builds raw executables for windows-x64, linux-x64 and macos-arm64 on every push — attached directly (no archives) to the rolling <a href="https://github.com/mamad7202202/dragon-agent/releases/tag/latest">latest release</a>. Version tags starting with v get their own formal release.</p>
 
-  <h2 id="faq">FAQ</h2>
-  <p><b style="color:var(--bone)">Where do my keys live?</b><br>
-     Only in your local config file. Nothing is sent anywhere except the provider you chose.</p>
-  <p><b style="color:var(--bone)">Is my code uploaded?</b><br>
-     No telemetry exists in either binary. Tool outputs go to the model provider you configured, like any LLM request.</p>
-  <p><b style="color:var(--bone)">Does the GUI need the CLI installed?</b><br>
-     No — they're independent binaries sharing optional files. Install either or both.</p>
-  <p><b style="color:var(--bone)">Windows says "unknown publisher"</b><br>
-     Binaries aren't code-signed yet; verify against <code class="inl">checksums.txt</code> and run.</p>
+  <h2 id="roadmap" data-i="sRoad">Roadmap</h2>
+  <ul>
+    <li data-i="r1">Embedding-backed semantic recall (optional, provider-side)</li>
+    <li data-i="r2">Session resume from the TUI</li>
+    <li data-i="r3">MCP tool servers</li>
+    <li data-i="r4">Multi-file diff review before writes</li>
+  </ul>
+
+  <h2 id="updates" data-i="sUpd">Updates</h2>
+  <p data-i="pUpd">On every launch both apps ping GitHub's releases API. When a newer version exists you'll see a banner (desktop) or footer note (TUI) linking straight to the release page. Releases are versioned <code class="inl">vX.Y.Z</code> with raw executables plus <code class="inl">checksums.txt</code>, and the installers always fetch the newest stable build.</p>
+
+  <h2 id="faq" data-i="sFaq">FAQ</h2>
+  <p><b style="color:var(--bone)" data-i="q1">Where do my keys live?</b><br><span data-i="a1">Only in your local config file. Nothing is sent anywhere except the provider you chose.</span></p>
+  <p><b style="color:var(--bone)" data-i="q2">Is my code uploaded?</b><br><span data-i="a2">No telemetry exists in either binary. Tool outputs go to the model provider you configured, like any LLM request.</span></p>
+  <p><b style="color:var(--bone)" data-i="q3">Does the GUI need the CLI installed?</b><br><span data-i="a3">No — they're independent binaries sharing optional files. Install either or both.</span></p>
+  <p><b style="color:var(--bone)" data-i="q4">Windows says “unknown publisher”</b><br><span data-i="a4">Binaries aren't code-signed yet; verify against checksums.txt and run.</span></p>
 </article>
 </div>
 
 <footer>
-  <span>created by <a href="https://t.me/mamad720220">@mamad720220</a></span>
-  <span><a href="index.html">home</a> · <a href="stats.html">live stats</a> · MIT</span>
+  <span><span data-i="madeBy">created by</span> <a href="https://t.me/mamad720220">@mamad720220</a></span>
+  <span><a href="index.html" data-i="fHome">home</a> · <a href="stats.html" data-i="fStats">stats</a> · MIT</span>
 </footer>
 </div>
 
-<script>
-// copy buttons
-document.querySelectorAll("pre").forEach(pre=>{
-  if(pre.querySelector(".copy"))return;
-  const b=document.createElement("button");b.className="copy";b.textContent="copy";
-  b.onclick=()=>navigator.clipboard.writeText(pre.innerText.replace(/^copy\n?/,"")).then(()=>{
-    b.textContent="copied";setTimeout(()=>b.textContent="copy",1200);});
-  pre.appendChild(b);
-});
-// reading progress
-const p=document.getElementById("progress");
-addEventListener("scroll",()=>{
-  const h=document.documentElement;
-  p.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+"%";
-});
-</script>
+<script src="site.js"></script>
+<script src="docs-strings.js"></script>
 </body>
 </html>

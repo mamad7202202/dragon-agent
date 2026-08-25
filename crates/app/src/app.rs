@@ -454,7 +454,7 @@ impl DragonApp {
         cx.notify();
     }
 
-    pub fn explain_pending(&mut self, cx: &mut Context<Self>) {
+    pub fn explain_pending(&mut self, _cx: &mut Context<Self>) {
         if let Some((_, tool)) = &self.pending {
             let detail = self
                 .items

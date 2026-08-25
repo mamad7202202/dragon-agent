@@ -66,7 +66,7 @@ fn button(
     let (bg, fg, border) = match kind {
         BtnKind::Primary => (theme.ember, Some(gpui::rgb(0x201016).into()), None),
         BtnKind::Ghost => (theme.surface, Some(theme.muted), Some(theme.line)),
-        BtnKind::Danger => (rgba(0xF0545422), Some(theme.blood), None),
+        BtnKind::Danger => (rgba(0xF0545422).into(), Some(theme.blood), None),
         BtnKind::Jade => (theme.jade, Some(gpui::rgb(0x10241A).into()), None),
     };
     div()
@@ -1351,7 +1351,7 @@ fn render_settings(app: &mut DragonApp, cx: &mut Context<DragonApp>) -> Stateful
 
 // -------------------------------------------------------------------- about
 
-fn render_about(app: &mut DragonApp, cx: &mut Context<DragonApp>) -> Div {
+fn render_about(_app: &mut DragonApp, cx: &mut Context<DragonApp>) -> Div {
     let theme = theme::theme(cx);
     let gh = cx.listener(|app, _, _, cx| app.open_homepage(cx));
 

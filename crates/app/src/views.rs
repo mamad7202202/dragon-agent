@@ -1,6 +1,7 @@
 //! All rendering: sidebar, top bar, chat stream, composer and the panes.
 
 use crate::app::{DragonApp, Item, Tab};
+use crate::input::TextField;
 use crate::theme::{self, Theme};
 use dragon_core::agent::Mode;
 use dragon_core::memory::graph::{Kind, Tier};
@@ -63,10 +64,10 @@ fn button(
 ) -> Stateful<Div> {
     let label: SharedString = label.into();
     let (bg, fg, border) = match kind {
-        BtnKind::Primary => (theme.ember, Some(gpui::rgb(0x201016)), None),
+        BtnKind::Primary => (theme.ember, Some(gpui::rgb(0x201016).into()), None),
         BtnKind::Ghost => (theme.surface, Some(theme.muted), Some(theme.line)),
         BtnKind::Danger => (rgba(0xF0545422), Some(theme.blood), None),
-        BtnKind::Jade => (theme.jade, Some(gpui::rgb(0x10241A)), None),
+        BtnKind::Jade => (theme.jade, Some(gpui::rgb(0x10241A).into()), None),
     };
     div()
         .id(id)
@@ -411,7 +412,7 @@ fn render_topbar(app: &mut DragonApp, cx: &mut Context<DragonApp>) -> Div {
                 } else {
                     gpui::FontWeight::MEDIUM
                 })
-                .text_color(if active { gpui::rgb(0x201016) } else { theme.muted })
+                .text_color(if active { gpui::rgb(0x201016).into() } else { theme.muted })
                 .when(active, |el| el.bg(theme.ember))
                 .hover(move |s| if active { s } else { s.bg(theme.elevated) })
                 .on_click(handler)
@@ -1181,7 +1182,7 @@ fn provider_form(app: &mut DragonApp, window: &mut Window, cx: &mut Context<Drag
                 .py_1()
                 .rounded_full()
                 .text_size(px(10.5))
-                .text_color(if selected { gpui::rgb(0x201016) } else { theme.muted })
+                .text_color(if selected { gpui::rgb(0x201016).into() } else { theme.muted })
                 .bg(if selected { theme.ember } else { theme.elevated })
                 .hover(|s| s.opacity(0.85))
                 .on_click(click)
@@ -1200,7 +1201,7 @@ fn provider_form(app: &mut DragonApp, window: &mut Window, cx: &mut Context<Drag
             .rounded_full()
             .text_size(px(10.5))
             .text_color(if custom_selected {
-                gpui::rgb(0x201016)
+                gpui::rgb(0x201016).into()
             } else {
                 theme.muted
             })

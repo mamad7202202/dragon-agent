@@ -5,7 +5,7 @@ use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
 
 use gpui::{
-    actions, fill, px, relative, App, Bounds, Context, CursorStyle, Element,
+    actions, div, fill, px, relative, App, Bounds, Context, CursorStyle, Element,
     ElementInputHandler, Entity, EntityInputHandler, FocusHandle, Focusable, GlobalElementId,
     InspectorElementId, IntoElement, KeyBinding, LayoutId, MouseButton, MouseDownEvent,
     MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, ShapedLine, SharedString, Style,

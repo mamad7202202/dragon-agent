@@ -91,10 +91,17 @@ impl Bridge {
         let (cmd_tx, cmd_rx) = channel::<Internal>();
         let (ev_tx, ev_rx) = channel::<Ev>();
 
-        std::thread::spawn(move || {
-            let mut worker = Worker::new(cmd_rx, cmd_tx.clone(), ev_tx.clone(), cfg, memory, graph);
-            worker.run();
-        });
+        {
+            // Clone before the closure: a `move` closure would otherwise
+            // capture the originals even though we only send clones in.
+            let worker_cmds = cmd_tx.clone();
+            let worker_evs = ev_tx.clone();
+            std::thread::spawn(move || {
+                let mut worker =
+                    Worker::new(cmd_rx, worker_cmds, worker_evs, cfg, memory, graph);
+                worker.run();
+            });
+        }
 
         // Pre-flight update check — fully async, no terminal, no blocking.
         spawn_update_check(ev_tx);

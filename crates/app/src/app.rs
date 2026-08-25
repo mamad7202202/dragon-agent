@@ -10,8 +10,8 @@ use dragon_core::memory::graph::GraphStore;
 use dragon_core::memory::MemoryStore;
 use dragon_core::presets;
 use gpui::{
-    App, ClipboardItem, Context, Entity, FocusHandle, Focusable, KeyBinding, ListAlignment,
-    ListState, Render, SharedString, WeakEntity, prelude::*,
+    actions, App, ClipboardItem, Context, Entity, FocusHandle, Focusable, KeyBinding,
+    ListAlignment, ListState, Render, SharedString, WeakEntity, Window, prelude::*,
 };
 use std::sync::mpsc::TryRecvError;
 use std::sync::{Arc, Mutex};
@@ -427,7 +427,7 @@ impl DragonApp {
             self.tab = Tab::Providers;
             return;
         }
-        self.composer.update(cx, |f, cx| f.clear(cx)).ok();
+        self.composer.update(cx, |f, cx| f.clear(cx));
         self.items.push(Item::User(text.clone()));
         self.streaming = Some(String::new());
         self.busy = true;
@@ -568,8 +568,8 @@ impl DragonApp {
         if let Some(p) = presets::PRESETS.get(idx) {
             let url = p.base_url.to_string();
             let models = p.models.join(", ");
-            self.f_url.update(cx, |f, cx| f.set_text(url, cx)).ok();
-            self.f_models.update(cx, |f, cx| f.set_text(models, cx)).ok();
+            self.f_url.update(cx, |f, cx| f.set_text(url, cx));
+            self.f_models.update(cx, |f, cx| f.set_text(models, cx));
         }
         cx.notify();
     }
@@ -612,7 +612,7 @@ impl DragonApp {
             models,
         });
         self.form_open = false;
-        self.f_key.update(cx, |f, cx| f.clear(cx)).ok();
+        self.f_key.update(cx, |f, cx| f.clear(cx));
         self.show_toast(format!("saved '{name}'"), cx);
         cx.notify();
     }

@@ -16,6 +16,7 @@ mod theme;
 mod views;
 
 use anyhow::Result;
+use app::DragonApp;
 use gpui::{
     App, Application, Bounds, TitlebarOptions, WindowBounds, WindowOptions, point, px,
     prelude::*, size,
